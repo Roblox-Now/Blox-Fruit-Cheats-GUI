@@ -659,31 +659,55 @@ SearchPlayer.BackgroundColor3 = Color3.new(1, 0, 0)
 SearchPlayer.Name = "SearchPlayer"
 SearchPlayer.ZIndex = 2
 
--- Create a UIListLayout to automatically arrange the buttons vertically
+-- Use a UIListLayout to automatically arrange the buttons vertically.
 local listLayout = Instance.new("UIListLayout", SearchPlayer)
 listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 5)
 
-for i, plr in ipairs(game.Players:GetPlayers()) do
-	if plr ~= player then
-		local tpButton = Instance.new("TextButton")
-		tpButton.Parent = SearchPlayer
-		tpButton.Size = UDim2.new(0, 85, 0, 15)
-		tpButton.LayoutOrder = i  -- ensures the buttons follow the order
-		tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
-		tpButton.TextScaled = true
-		tpButton.Font = Enum.Font.FredokaOne
-		tpButton.Text = plr.Name
-		tpButton.ZIndex = 2
-		tpButton.MouseButton1Click:Connect(function()
-			if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-				player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
-			end
-		end)
-		Instance.new("UICorner", tpButton)
+local function updatePlayerList()
+	-- Clear old buttons
+	for _, child in ipairs(SearchPlayer:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+
+	for i, plr in ipairs(game.Players:GetPlayers()) do
+		if plr ~= player then
+			local tpButton = Instance.new("TextButton")
+			tpButton.Parent = SearchPlayer
+			tpButton.Size = UDim2.new(0, 85, 0, 15)
+			tpButton.LayoutOrder = i
+			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
+			tpButton.TextScaled = true
+			tpButton.Font = Enum.Font.FredokaOne
+			tpButton.Text = plr.Name
+			tpButton.ZIndex = 2
+			tpButton.MouseButton1Click:Connect(function()
+				if player.Character 
+					and player.Character:FindFirstChild("HumanoidRootPart") 
+					and plr.Character 
+					and plr.Character:FindFirstChild("HumanoidRootPart") then
+					player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+				end
+			end)
+			Instance.new("UICorner", tpButton)
+		end
 	end
 end
+
+-- Initial update
+updatePlayerList()
+
+-- Update the list when players join or leave
+game.Players.PlayerAdded:Connect(function(newPlayer)
+	updatePlayerList()
+end)
+
+game.Players.PlayerRemoving:Connect(function(leavingPlayer)
+	updatePlayerList()
+end)
 
 ---------------------------
 -- FPS LABEL
