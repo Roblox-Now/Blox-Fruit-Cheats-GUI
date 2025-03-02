@@ -14,6 +14,4 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/Roblox-Now/Universal-
 
 ## Features
 
-(IN PROGRESS)
-
 - 🌐 **Support Server**: Join the LeanTag support server and get assistance from the community.
