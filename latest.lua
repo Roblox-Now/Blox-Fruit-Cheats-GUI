@@ -22,6 +22,7 @@
    - On mobile, on-screen Up/Down buttons (outside the main menu) provide vertical input.
    - Disconnect and Rejoin buttons are placed in the main menu.
    - A continuous collision update loop forces CanCollide = not noclipEnabled so that with Fly+Noclip enabled, you pass through obstacles.
+   - The MainFrame is draggable using a Tween–based drag function.
 --]]
 
 
@@ -92,6 +93,39 @@ MainFrame.Visible = false
 MainFrame.Size = UDim2.new(0, 500, 0, 250)
 MainFrame.Position = UDim2.new(0.302, 0, 0.296, 0)
 Instance.new("UICorner", MainFrame)
+
+-- New Drag Function using TweenService (applied to MainFrame)
+local UIS = game:GetService("UserInputService")
+local dragToggle = nil
+local dragSpeed = 0.25
+local dragStart = nil
+local startPos = nil
+
+local function updateInput(input)
+	local delta = input.Position - dragStart
+	local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+		startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	TweenService:Create(MainFrame, TweenInfo.new(dragSpeed), {Position = position}):Play()
+end
+
+MainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+		dragToggle = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragToggle = false
+			end
+		end)
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragToggle then
+		updateInput(input)
+	end
+end)
 
 OpenButton.MouseButton1Click:Connect(function()
 	MainFrame.Visible = not MainFrame.Visible
@@ -480,7 +514,9 @@ HighlightAll.MouseButton1Click:Connect(function()
 			end
 		end
 		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character then highlightCharacter(plr.Character) end
+			if plr.Character then
+				highlightCharacter(plr.Character)
+			end
 			plr.CharacterAdded:Connect(highlightCharacter)
 		end
 		HighlightAll.Text = "Highlight All: On"
@@ -544,7 +580,7 @@ UpButton.Text = "Up"
 UpButton.Font = Enum.Font.FredokaOne
 UpButton.TextScaled = true
 UpButton.BackgroundColor3 = Color3.new(0, 1, 0)
--- Increased size for mobile (60x30)
+-- Increased size for mobile: 60x30
 UpButton.Position = UDim2.new(0, 20, 1, -150)
 UpButton.Size = UDim2.new(0, 60, 0, 30)
 Instance.new("UICorner", UpButton)
@@ -557,7 +593,7 @@ DownButton.Text = "Down"
 DownButton.Font = Enum.Font.FredokaOne
 DownButton.TextScaled = true
 DownButton.BackgroundColor3 = Color3.new(1, 0, 0)
--- Increased size for mobile (60x30)
+-- Increased size for mobile: 60x30
 DownButton.Position = UDim2.new(0, 80, 1, -150)
 DownButton.Size = UDim2.new(0, 60, 0, 30)
 Instance.new("UICorner", DownButton)
@@ -580,31 +616,31 @@ local function startFly_HD()
 	local hrp = character:FindFirstChild("HumanoidRootPart")
 	local hum = character:FindFirstChildOfClass("Humanoid")
 	if not hrp or not hum then return end
-	
+
 	hum.PlatformStand = true
-	
+
 	if UIS.TouchEnabled then
 		oldGravity = workspace.Gravity
 		workspace.Gravity = 0
 		UpButton.Visible = true
 		DownButton.Visible = true
 	end
-	
+
 	bv = Instance.new("BodyVelocity", hrp)
 	bv.Velocity = Vector3.new(0, 0, 0)
 	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-	
+
 	bg = Instance.new("BodyGyro", hrp)
 	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
 	bg.CFrame = CFrame.new(hrp.Position, hrp.Position + workspace.CurrentCamera.CFrame.LookVector)
-	
+
 	hdFlying = true
 	local flyConn = RunService.RenderStepped:Connect(function()
 		if not hdFlying then
 			if flyConn then flyConn:Disconnect() end
 			return
 		end
-		
+
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
 		if UIS.TouchEnabled then
@@ -621,9 +657,9 @@ local function startFly_HD()
 			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
 			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
 		end
-		
+
 		if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
-		
+
 		bv.Velocity = moveDir * flySpeed
 		local targetCFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
 		bg.CFrame = bg.CFrame:Lerp(targetCFrame, 0.1)
