@@ -26,8 +26,6 @@ local DevMode = true
 local Menu_Version = "V1.0.5 BETA"
 local Menu_Name = "Universal GUI"
 local titleText = "Universal GUI"
-local openButtonText = "Open Universal GUI"
-local closeButtonText = "Close Universal GUI"
 
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
@@ -46,6 +44,10 @@ local mobileDown = false
 
 local Page = 1
 local regenConnection = nil  -- for InstantRegen
+
+-- Tween durations (in seconds)
+local buttonTweenTime = 0.1   -- for OpenButton hover/click effects
+local mainframeTweenTime = 0.25
 
 ---------------------------
 -- AUTO-RELOAD CHARACTER ON DEATH (Optional)
@@ -81,27 +83,57 @@ local MainGui = Instance.new("ScreenGui")
 MainGui.Parent = player.PlayerGui
 MainGui.Name = Menu_Name
 
-local OpenButton = Instance.new("TextButton")
+-- OpenButton as ImageButton using provided asset ID
+local OpenButton = Instance.new("ImageButton")
 OpenButton.Name = "OpenButton"
 OpenButton.Parent = MainGui
-OpenButton.Size = UDim2.new(0, 200, 0, 50)
+OpenButton.Size = UDim2.new(0, 50, 0, 50)
 OpenButton.Position = UDim2.new(0.032, 0, 0.386, 0)
+OpenButton.AnchorPoint = Vector2.new(0.5, 0.5)  -- Scale from center
 Instance.new("UICorner", OpenButton)
-OpenButton.Font = Enum.Font.FredokaOne
-OpenButton.TextScaled = true
-OpenButton.BackgroundColor3 = Color3.new(0, 1, 0)
-OpenButton.Text = openButtonText
+OpenButton.Image = "http://www.roblox.com/asset/?id=104276980467632"
+OpenButton.ImageColor3 = Color3.new(1, 1, 1)
 
+-- OpenButton hover/click effects
+local normalSize = UDim2.new(0, 50, 0, 50)
+local hoverSize = UDim2.new(0, 45, 0, 45)
+local clickSize = UDim2.new(0, 55, 0, 55)
+local isHovering = false
+
+OpenButton.MouseEnter:Connect(function()
+	isHovering = true
+	local tween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = hoverSize})
+	tween:Play()
+end)
+
+OpenButton.MouseLeave:Connect(function()
+	isHovering = false
+	local tween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = normalSize})
+	tween:Play()
+end)
+
+---------------------------
+-- MAINFRAME SETUP (Original layout for buttons restored)
+---------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = MainGui
 MainFrame.BackgroundColor3 = Color3.new(0, 0, 0)
 MainFrame.Visible = false
-MainFrame.Size = UDim2.new(0, 500, 0, 250)
-MainFrame.Position = UDim2.new(0.302, 0, 0.296, 0)
+-- Original layout values (do not change these)
+local originalPos = UDim2.new(0.302, 0, 0.296, 0)
+local originalSize = UDim2.new(0, 500, 0, 250)
+MainFrame.Position = originalPos
+MainFrame.Size = originalSize
 Instance.new("UICorner", MainFrame)
 
--- Title, Version, and Credits UI
+-- Compute the center of MainFrame (absolute center based on its original size/position)
+local centerPos = UDim2.new(
+	originalPos.X.Scale, originalPos.X.Offset + originalSize.X.Offset/2,
+	originalPos.Y.Scale, originalPos.Y.Offset + originalSize.Y.Offset/2
+)
+
+-- Title, Version, and Credits (as originally laid out)
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "Title"
 TitleLabel.Parent = MainFrame
@@ -135,7 +167,7 @@ Credits.Text = "Made By @Roblo1sjG / HYLO"
 Credits.TextScaled = true
 Instance.new("UICorner", Credits)
 
--- Disconnect & Rejoin Buttons
+-- Disconnect & Rejoin Buttons (original positions/sizes)
 local DisconnectButton = Instance.new("TextButton")
 DisconnectButton.Name = "DisconnectButton"
 DisconnectButton.Text = "Disconnect"
@@ -164,50 +196,79 @@ RejoinButton.MouseButton1Click:Connect(function()
 	TeleportService:Teleport(game.PlaceId, player) 
 end)
 
--- Tween-based Drag for MainFrame
-local dragToggle = false
-local dragSpeed = 0.25
-local dragStart, startPos
+---------------------------
+-- DRAGGABLE FUNCTION (unchanged)
+---------------------------
+local function makeDraggable(guiObject)
+	local dragToggle = false
+	local dragSpeed = 0.25
+	local dragStart, startPos
 
-local function updateInput(input)
-	local delta = input.Position - dragStart
-	local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-		startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	TweenService:Create(MainFrame, TweenInfo.new(dragSpeed), {Position = position}):Play()
+	guiObject.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+			dragToggle = true
+			dragStart = input.Position
+			startPos = guiObject.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragToggle = false
+				end
+			end)
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(input)
+		if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragToggle then
+			local delta = input.Position - dragStart
+			local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+			TweenService:Create(guiObject, TweenInfo.new(dragSpeed), {Position = newPos}):Play()
+		end
+	end)
 end
 
-MainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
-		dragToggle = true
-		dragStart = input.Position
-		startPos = MainFrame.Position
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragToggle = false
-			end
-		end)
-	end
-end)
+-- Apply draggable behavior to MainFrame and OpenButton
+makeDraggable(MainFrame)
+makeDraggable(OpenButton)
 
-UIS.InputChanged:Connect(function(input)
-	if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragToggle then
-		updateInput(input)
-	end
-end)
-
+---------------------------
+-- OPEN/CLOSE MAINFRAME WITH CENTER-BASED TWEEN
+---------------------------
 OpenButton.MouseButton1Click:Connect(function()
-	MainFrame.Visible = not MainFrame.Visible
+	-- OpenButton click animation
+	local clickTween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = clickSize})
+	clickTween:Play()
+	clickTween.Completed:Connect(function()
+		local targetSize = isHovering and hoverSize or normalSize
+		local shrinkTween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = targetSize})
+		shrinkTween:Play()
+	end)
+
 	if MainFrame.Visible then
-		OpenButton.Text = closeButtonText
-		OpenButton.BackgroundColor3 = Color3.new(1, 0, 0)
+		-- When closing, tween MainFrame to 0 size at center
+		local tweenClose1 = TweenService:Create(MainFrame, TweenInfo.new(mainframeTweenTime), {Size = UDim2.new(0, 0, 0, 0)})
+		local tweenClose2 = TweenService:Create(MainFrame, TweenInfo.new(mainframeTweenTime), {Position = centerPos})
+		tweenClose1:Play()
+		tweenClose2:Play()
+		tweenClose1.Completed:Connect(function()
+			MainFrame.Visible = false
+			-- Reset layout
+			MainFrame.Size = originalSize
+			MainFrame.Position = originalPos
+		end)
 	else
-		OpenButton.Text = openButtonText
-		OpenButton.BackgroundColor3 = Color3.new(0, 1, 0)
+		-- When opening, start at center with 0 size and tween to original layout
+		MainFrame.Position = centerPos
+		MainFrame.Size = UDim2.new(0, 0, 0, 0)
+		MainFrame.Visible = true
+		local tweenOpen1 = TweenService:Create(MainFrame, TweenInfo.new(mainframeTweenTime), {Size = originalSize})
+		local tweenOpen2 = TweenService:Create(MainFrame, TweenInfo.new(mainframeTweenTime), {Position = originalPos})
+		tweenOpen1:Play()
+		tweenOpen2:Play()
 	end
 end)
 
 ---------------------------
--- SIDEBAR & CHEAT AREA SETUP
+-- SIDEBAR & CHEAT AREA SETUP (Original layout)
 ---------------------------
 local SideBarFrame = Instance.new("Frame")
 SideBarFrame.Parent = MainFrame
@@ -233,7 +294,7 @@ ButtonsScrollingFrame.Position = UDim2.new(0, 0, 0, 0)
 ButtonsScrollingFrame.Size = UDim2.new(0, 100, 0, 250)
 
 ---------------------------
--- CHEAT FRAMES (Pages)
+-- CHEAT FRAMES (Pages) (Original layout)
 ---------------------------
 local Cheat1_Frame = Instance.new("Frame")
 Cheat1_Frame.Visible = true
@@ -282,7 +343,7 @@ local function updateCheatPages()
 end
 
 ---------------------------
--- SIDEBAR BUTTONS
+-- SIDEBAR BUTTONS (Original layout)
 ---------------------------
 local Cheat1_Button = Instance.new("TextButton")
 Cheat1_Button.Name = "TPButton"
@@ -321,7 +382,7 @@ Instance.new("UICorner", Cheat3_Button)
 Cheat3_Button.MouseButton1Click:Connect(function() Page = 3; updateCheatPages() end)
 
 ---------------------------
--- CHEAT PAGE 1: TELEPORT
+-- CHEAT PAGE 1: TELEPORT (Original layout)
 ---------------------------
 local XPos = Instance.new("TextBox")
 XPos.TextScaled = true
@@ -377,7 +438,7 @@ ExecuteTPButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- CHEAT PAGE 2: MOVEMENT
+-- CHEAT PAGE 2: MOVEMENT (Original layout)
 ---------------------------
 local WS = Instance.new("TextBox")
 WS.Parent = Cheat2_Frame
@@ -466,7 +527,7 @@ ExecuteJPButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- CHEAT PAGE 3: OP (Fly, Noclip, Map Transparency, Highlight, InstantRegen, Refresh, NameTag All)
+-- CHEAT PAGE 3: OP (Original layout)
 ---------------------------
 local MT = Instance.new("TextBox")
 MT.Parent = Cheat3_Frame
@@ -530,7 +591,7 @@ local RefreshCharacter = Instance.new("TextButton")
 RefreshCharacter.Parent = MainFrame
 RefreshCharacter.Position = UDim2.new(0.25, 0, -0.094, 0)
 RefreshCharacter.Size = UDim2.new(0, 100, 0, 15)
-RefreshCharacter.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+RefreshCharacter.BackgroundColor3 = Color3.new(1, 0, 0)
 RefreshCharacter.TextScaled = true
 RefreshCharacter.Font = Enum.Font.FredokaOne
 RefreshCharacter.Text = "RefreshCharacter"
@@ -545,7 +606,7 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (Live Updating Distance & Dynamic Text Size)
+-- NAME TAG ALL (Original layout)
 ---------------------------
 local nameTagAllEnabled = false
 local nameTagUpdateConnection = nil
@@ -562,7 +623,6 @@ NameTagAll.Name = "NameTagAll"
 Instance.new("UICorner", NameTagAll)
 NameTagAll.ZIndex = 2
 
--- RGB TextBoxes using the specified positions and sizes
 local function createColorTextBox(name, posX, posY, placeholder)
 	local box = Instance.new("TextBox")
 	box.Parent = Cheat3_Frame
@@ -583,14 +643,12 @@ local NameTagAllR = createColorTextBox("NameTagAllR", 0.675, 0.864, "R")
 local NameTagAllG = createColorTextBox("NameTagAllG", 0.675, 0.904, "G")
 local NameTagAllB = createColorTextBox("NameTagAllB", 0.675, 0.944, "B")
 
--- Function to Get RGB
 local function getRGB()
 	return tonumber(NameTagAllR.Text) or 255,
 	tonumber(NameTagAllG.Text) or 255,
 	tonumber(NameTagAllB.Text) or 255
 end
 
--- Live update function: updates distance text and scales text size
 local function updateNametags()
 	local r, g, b = getRGB()
 	for _, plr in ipairs(game.Players:GetPlayers()) do
@@ -599,12 +657,11 @@ local function updateNametags()
 			local nametag = head:FindFirstChild("Nametag")
 			if nametag then
 				local textLabel = nametag:FindFirstChildWhichIsA("TextLabel")
-				if textLabel and player.Character and player.Character:FindFirstChild("HumanoidRootPart") 
+				if textLabel and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 					and plr.Character:FindFirstChild("HumanoidRootPart") then
 					local distance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+					local scaleFactor = math.clamp((distance - 30) / 300 + 1, 1, 1.2)
 					textLabel.Text = plr.Name .. " [" .. math.floor(distance) .. " Studs Away]"
-					-- Scale text size so it gets bigger with distance
-					local scaleFactor = math.clamp(distance / 50, 1, 3)  -- adjust these values as needed
 					textLabel.TextSize = 14 * scaleFactor
 					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
 				end
@@ -613,7 +670,6 @@ local function updateNametags()
 	end
 end
 
--- Update nametags when the RGB textboxes lose focus
 NameTagAllR.FocusLost:Connect(updateNametags)
 NameTagAllG.FocusLost:Connect(updateNametags)
 NameTagAllB.FocusLost:Connect(updateNametags)
@@ -623,9 +679,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 	NameTagAll.Text = nameTagAllEnabled and "NameTag All: On" or "NameTag All: Off"
 	NameTagAll.BackgroundColor3 = nameTagAllEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
 	local r, g, b = getRGB()
-
 	if nameTagAllEnabled then
-		-- For each player, create a nametag if one doesn't already exist
 		for _, plr in ipairs(game.Players:GetPlayers()) do
 			if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
 				local head = plr.Character.Head
@@ -638,21 +692,18 @@ NameTagAll.MouseButton1Click:Connect(function()
 					billboard.Size = UDim2.new(0, 200, 0, 50)
 					billboard.AlwaysOnTop = true
 					billboard.StudsOffset = Vector3.new(0, 3, 0)
-
 					local textLabel = Instance.new("TextLabel", billboard)
 					textLabel.Size = UDim2.new(1, 0, 1, 0)
 					textLabel.BackgroundTransparency = 1
 					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
 					textLabel.Font = Enum.Font.FredokaOne
-					textLabel.TextScaled = false -- allow manual control of TextSize
+					textLabel.TextScaled = false
 					textLabel.TextSize = 14
 				end
 			end
 		end
-		-- Start live updating nametags every frame
 		nameTagUpdateConnection = RunService.RenderStepped:Connect(updateNametags)
 	else
-		-- If disabled, disconnect live update and hide all nametags
 		if nameTagUpdateConnection then
 			nameTagUpdateConnection:Disconnect()
 			nameTagUpdateConnection = nil
@@ -670,7 +721,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- FLY SPEED TEXTBOX & MOBILE FLY BUTTONS (for mobile)
+-- FLY SPEED TEXTBOX & MOBILE FLY BUTTONS (Original layout)
 ---------------------------
 local FlySpeedBox = Instance.new("TextBox")
 FlySpeedBox.Name = "FlySpeedBox"
@@ -900,6 +951,6 @@ InstantRegen.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- UPDATE CHEAT PAGE DISPLAY
+-- UPDATE CHEAT PAGE DISPLAY (Original layout)
 ---------------------------
 updateCheatPages()
