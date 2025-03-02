@@ -3,7 +3,7 @@
   <img src=><img src="https://i.ibb.co/TDhdvpPP/Universal-GUI.png" width="500" height="500" alt="Universal-GUI">
 </div>
 
-(IN PROGRESS)
+A Powerful GUI That Let's You Noclip, Fly, See All Players Highlighted, And So Much More!
 
 ## Universal GUI Script:
 
