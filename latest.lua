@@ -101,7 +101,7 @@ MainFrame.Size = UDim2.new(0, 500, 0, 250)
 MainFrame.Position = UDim2.new(0.302, 0, 0.296, 0)
 Instance.new("UICorner", MainFrame)
 
--- Title, Version, and Credits (Author) UI
+-- Title, Version, and Credits UI
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "Title"
 TitleLabel.Parent = MainFrame
@@ -135,7 +135,7 @@ Credits.Text = "Made By @Roblo1sjG / HYLO"
 Credits.TextScaled = true
 Instance.new("UICorner", Credits)
 
--- Disconnect & Rejoin Buttons (inside MainFrame)
+-- Disconnect & Rejoin Buttons
 local DisconnectButton = Instance.new("TextButton")
 DisconnectButton.Name = "DisconnectButton"
 DisconnectButton.Text = "Disconnect"
@@ -164,7 +164,7 @@ RejoinButton.MouseButton1Click:Connect(function()
 	TeleportService:Teleport(game.PlaceId, player) 
 end)
 
--- Tween-based Drag Function for MainFrame
+-- Tween-based Drag for MainFrame
 local dragToggle = false
 local dragSpeed = 0.25
 local dragStart, startPos
@@ -466,7 +466,7 @@ ExecuteJPButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- CHEAT PAGE 3: OP (Fly, Noclip, Map Transparency, Highlight, InstantRegen, Refresh)
+-- CHEAT PAGE 3: OP (Fly, Noclip, Map Transparency, Highlight, InstantRegen, Refresh, NameTag All)
 ---------------------------
 local MT = Instance.new("TextBox")
 MT.Parent = Cheat3_Frame
@@ -477,7 +477,7 @@ MT.TextScaled = true
 MT.Font = Enum.Font.FredokaOne
 MT.Text = "0.5"
 MT.Name = "MT"
-MT.PlaceholderText = "Map Transparency [NUMBER]"
+MT.PlaceholderText = "Map Transparency"
 Instance.new("UICorner", MT)
 
 local Fly = Instance.new("TextButton")
@@ -544,12 +544,15 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 	end
 end)
 
+---------------------------
+-- NAME TAG ALL (Original positions & no color preview)
+---------------------------
 local nameTagAllEnabled = false
 
 local NameTagAll = Instance.new("TextButton")
 NameTagAll.Parent = Cheat3_Frame
-NameTagAll.Position = UDim2.new(0.675, 0, 0.74, 0)
-NameTagAll.Size = UDim2.new(0, 100, 0, 25)
+NameTagAll.Position = UDim2.new(0.675, 0, 0.70, 0)
+NameTagAll.Size = UDim2.new(0, 120, 0, 30)
 NameTagAll.BackgroundColor3 = Color3.new(1, 0, 0)
 NameTagAll.TextScaled = true
 NameTagAll.Font = Enum.Font.FredokaOne
@@ -558,87 +561,103 @@ NameTagAll.Name = "NameTagAll"
 Instance.new("UICorner", NameTagAll)
 NameTagAll.ZIndex = 2
 
-NameTagAll.MouseButton1Click:Connect(function()
-	nameTagAllEnabled = not nameTagAllEnabled
+-- RGB TextBoxes using the specified positions and sizes
+local function createColorTextBox(name, posX, posY, placeholder)
+	local box = Instance.new("TextBox")
+	box.Parent = Cheat3_Frame
+	box.Position = UDim2.new(posX, 0, posY, 0)
+	box.Size = UDim2.new(0, 100, 0, 10)
+	box.BackgroundColor3 = Color3.new(1, 1, 1)
+	box.TextScaled = true
+	box.Font = Enum.Font.FredokaOne
+	box.PlaceholderText = placeholder
+	box.Text = "255"
+	box.Name = name
+	Instance.new("UICorner", box)
+	box.ZIndex = 2
+	return box
+end
+
+local NameTagAllR = createColorTextBox("NameTagAllR", 0.675, 0.864, "R")
+local NameTagAllG = createColorTextBox("NameTagAllG", 0.675, 0.904, "G")
+local NameTagAllB = createColorTextBox("NameTagAllB", 0.675, 0.944, "B")
+
+-- Function to Get RGB
+local function getRGB()
+	return tonumber(NameTagAllR.Text) or 255,
+	tonumber(NameTagAllG.Text) or 255,
+	tonumber(NameTagAllB.Text) or 255
+end
+
+-- Function to Update Nametags
+local function updateColors()
+	local r, g, b = getRGB()
 	if nameTagAllEnabled then
-		NameTagAll.Text = "NameTag All: On"
-		NameTagAll.BackgroundColor3 = Color3.new(0, 1, 0)
-	else
-		NameTagAll.Text = "NameTag All: Off"
-		NameTagAll.BackgroundColor3 = Color3.new(1, 0, 0)
-	end
-
-	for _, plr in ipairs(game.Players:GetPlayers()) do
-		-- Do not create or toggle a nametag for the local player.
-		if plr ~= player then
-			if plr.Character and plr.Character:FindFirstChild("Head") then
-				local head = plr.Character.Head
-				local nametag = head:FindFirstChild("Nametag")
+		for _, plr in ipairs(game.Players:GetPlayers()) do
+			if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
+				local nametag = plr.Character.Head:FindFirstChild("Nametag")
 				if nametag then
-					nametag.Enabled = nameTagAllEnabled
-				else
-					-- Only create a nametag if we're toggling on.
-					if nameTagAllEnabled then
-						local billboard = Instance.new("BillboardGui")
-						billboard.Name = "Nametag"
-						billboard.Adornee = head
-						billboard.Parent = head
-						billboard.Size = UDim2.new(0, 200, 0, 50)
-						billboard.AlwaysOnTop = true
-
-						local textLabel = Instance.new("TextLabel", billboard)
-						textLabel.Size = UDim2.new(1, 0, 1, 0)
-						textLabel.BackgroundTransparency = 1
-
-						-- Calculate the distance from the local player if possible.
-						local distance = 0
-						if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and 
-							plr.Character:FindFirstChild("HumanoidRootPart") then
-							distance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-						end
-						textLabel.Text = plr.Name .. " [" .. math.floor(distance) .. " Studs Away]"
+					local textLabel = nametag:FindFirstChildWhichIsA("TextLabel")
+					if textLabel then
+						textLabel.TextColor3 = Color3.fromRGB(r, g, b)
 					end
 				end
 			end
 		end
 	end
-end)
+end
 
-local ExecuteTransButton = Instance.new("TextButton")
-ExecuteTransButton.Parent = Cheat3_Frame
-ExecuteTransButton.Text = "Execute"
-ExecuteTransButton.Name = "ExecuteTransButton"
--- Updated position per request:
-ExecuteTransButton.Position = UDim2.new(0.087, 0, 0.58, 0)
-ExecuteTransButton.Size = UDim2.new(0, 100, 0, 25)
-ExecuteTransButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-ExecuteTransButton.TextScaled = true
-ExecuteTransButton.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", ExecuteTransButton)
-ExecuteTransButton.MouseButton1Click:Connect(function()
-	local transparencyValue = tonumber(MT.Text) or 0.5
-	local ws = game:GetService("Workspace")
-	local Players = game:GetService("Players")
-	local function isPlayerCharacter(object)
-		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character and object:IsDescendantOf(plr.Character) then return true end
-		end
-		return false
-	end
-	local function applyTransparency()
-		local count = 0
-		for _, obj in pairs(ws:GetDescendants()) do
-			if obj:IsA("BasePart") and not isPlayerCharacter(obj) then
-				obj.Transparency = transparencyValue
-				count = count + 1
+NameTagAllR.FocusLost:Connect(updateColors)
+NameTagAllG.FocusLost:Connect(updateColors)
+NameTagAllB.FocusLost:Connect(updateColors)
+
+NameTagAll.MouseButton1Click:Connect(function()
+	nameTagAllEnabled = not nameTagAllEnabled
+	NameTagAll.Text = nameTagAllEnabled and "NameTag All: On" or "NameTag All: Off"
+	NameTagAll.BackgroundColor3 = nameTagAllEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+
+	local r, g, b = getRGB()
+
+	for _, plr in ipairs(game.Players:GetPlayers()) do
+		if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
+			local head = plr.Character.Head
+			local nametag = head:FindFirstChild("Nametag")
+
+			local distance = 0
+			if player.Character and player.Character:FindFirstChild("HumanoidRootPart") 
+				and plr.Character:FindFirstChild("HumanoidRootPart") then
+				distance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+			end
+
+			local newText = plr.Name .. " [" .. math.floor(distance) .. " Studs Away]"
+
+			if nametag then
+				nametag.Enabled = nameTagAllEnabled
+				local textLabel = nametag:FindFirstChildWhichIsA("TextLabel")
+				if textLabel then
+					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
+					textLabel.Text = newText
+				end
+			else
+				if nameTagAllEnabled then
+					local billboard = Instance.new("BillboardGui")
+					billboard.Name = "Nametag"
+					billboard.Adornee = head
+					billboard.Parent = head
+					billboard.Size = UDim2.new(0, 200, 0, 50)
+					billboard.AlwaysOnTop = true
+					billboard.StudsOffset = Vector3.new(0, 2, 0)
+
+					local textLabel = Instance.new("TextLabel", billboard)
+					textLabel.Size = UDim2.new(1, 0, 1, 0)
+					textLabel.BackgroundTransparency = 1
+					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
+					textLabel.Text = newText
+					textLabel.Font = Enum.Font.FredokaOne
+				end
 			end
 		end
-		print("Transparency applied to", count, "map parts")
 	end
-	repeat wait() until player:FindFirstChild("PlayerGui")
-	print("Starting transparency change...")
-	applyTransparency()
-	print("Transparency change complete!")
 end)
 
 ---------------------------
@@ -696,7 +715,7 @@ DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
 DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
 
 ---------------------------
--- FLY HANDLING (HD Admin–Style: Freeze Body & Smoothly Follow Camera)
+-- FLY HANDLING (HD Admin–Style)
 ---------------------------
 local bv, bg  -- BodyVelocity and BodyGyro
 local hdFlying = false
@@ -726,7 +745,8 @@ local function startFly_HD()
 	bg.CFrame = workspace.CurrentCamera.CFrame
 
 	hdFlying = true
-	local flyConn = RunService.RenderStepped:Connect(function()
+	local flyConn
+	flyConn = RunService.RenderStepped:Connect(function()
 		if not hdFlying then
 			if flyConn then flyConn:Disconnect() end
 			return
@@ -749,7 +769,9 @@ local function startFly_HD()
 			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
 		end
 
-		if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
+		if moveDir.Magnitude > 0 then
+			moveDir = moveDir.Unit
+		end
 		bv.Velocity = moveDir * flySpeed
 		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.1)
 	end)
@@ -760,7 +782,9 @@ local function stopFly_HD()
 	local character = player.Character
 	if character then
 		local hum = character:FindFirstChildOfClass("Humanoid")
-		if hum then hum.PlatformStand = false end
+		if hum then
+			hum.PlatformStand = false
+		end
 	end
 	if bv then
 		bv:Destroy() 
