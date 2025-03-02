@@ -545,9 +545,10 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (Original positions & no color preview)
+-- NAME TAG ALL (Live Updating Distance & Dynamic Text Size)
 ---------------------------
 local nameTagAllEnabled = false
+local nameTagUpdateConnection = nil
 
 local NameTagAll = Instance.new("TextButton")
 NameTagAll.Parent = Cheat3_Frame
@@ -589,71 +590,79 @@ local function getRGB()
 	tonumber(NameTagAllB.Text) or 255
 end
 
--- Function to Update Nametags
-local function updateColors()
+-- Live update function: updates distance text and scales text size
+local function updateNametags()
 	local r, g, b = getRGB()
-	if nameTagAllEnabled then
-		for _, plr in ipairs(game.Players:GetPlayers()) do
-			if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
-				local nametag = plr.Character.Head:FindFirstChild("Nametag")
-				if nametag then
-					local textLabel = nametag:FindFirstChildWhichIsA("TextLabel")
-					if textLabel then
-						textLabel.TextColor3 = Color3.fromRGB(r, g, b)
-					end
+	for _, plr in ipairs(game.Players:GetPlayers()) do
+		if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
+			local head = plr.Character.Head
+			local nametag = head:FindFirstChild("Nametag")
+			if nametag then
+				local textLabel = nametag:FindFirstChildWhichIsA("TextLabel")
+				if textLabel and player.Character and player.Character:FindFirstChild("HumanoidRootPart") 
+					and plr.Character:FindFirstChild("HumanoidRootPart") then
+					local distance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+					textLabel.Text = plr.Name .. " [" .. math.floor(distance) .. " Studs Away]"
+					-- Scale text size so it gets bigger with distance
+					local scaleFactor = math.clamp(distance / 50, 1, 3)  -- adjust these values as needed
+					textLabel.TextSize = 14 * scaleFactor
+					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
 				end
 			end
 		end
 	end
 end
 
-NameTagAllR.FocusLost:Connect(updateColors)
-NameTagAllG.FocusLost:Connect(updateColors)
-NameTagAllB.FocusLost:Connect(updateColors)
+-- Update nametags when the RGB textboxes lose focus
+NameTagAllR.FocusLost:Connect(updateNametags)
+NameTagAllG.FocusLost:Connect(updateNametags)
+NameTagAllB.FocusLost:Connect(updateNametags)
 
 NameTagAll.MouseButton1Click:Connect(function()
 	nameTagAllEnabled = not nameTagAllEnabled
 	NameTagAll.Text = nameTagAllEnabled and "NameTag All: On" or "NameTag All: Off"
 	NameTagAll.BackgroundColor3 = nameTagAllEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-
 	local r, g, b = getRGB()
 
-	for _, plr in ipairs(game.Players:GetPlayers()) do
-		if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
-			local head = plr.Character.Head
-			local nametag = head:FindFirstChild("Nametag")
-
-			local distance = 0
-			if player.Character and player.Character:FindFirstChild("HumanoidRootPart") 
-				and plr.Character:FindFirstChild("HumanoidRootPart") then
-				distance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-			end
-
-			local newText = plr.Name .. " [" .. math.floor(distance) .. " Studs Away]"
-
-			if nametag then
-				nametag.Enabled = nameTagAllEnabled
-				local textLabel = nametag:FindFirstChildWhichIsA("TextLabel")
-				if textLabel then
-					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
-					textLabel.Text = newText
-				end
-			else
-				if nameTagAllEnabled then
+	if nameTagAllEnabled then
+		-- For each player, create a nametag if one doesn't already exist
+		for _, plr in ipairs(game.Players:GetPlayers()) do
+			if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
+				local head = plr.Character.Head
+				local nametag = head:FindFirstChild("Nametag")
+				if not nametag then
 					local billboard = Instance.new("BillboardGui")
 					billboard.Name = "Nametag"
 					billboard.Adornee = head
 					billboard.Parent = head
 					billboard.Size = UDim2.new(0, 200, 0, 50)
 					billboard.AlwaysOnTop = true
-					billboard.StudsOffset = Vector3.new(0, 2, 0)
+					billboard.StudsOffset = Vector3.new(0, 3, 0)
 
 					local textLabel = Instance.new("TextLabel", billboard)
 					textLabel.Size = UDim2.new(1, 0, 1, 0)
 					textLabel.BackgroundTransparency = 1
 					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
-					textLabel.Text = newText
 					textLabel.Font = Enum.Font.FredokaOne
+					textLabel.TextScaled = false -- allow manual control of TextSize
+					textLabel.TextSize = 14
+				end
+			end
+		end
+		-- Start live updating nametags every frame
+		nameTagUpdateConnection = RunService.RenderStepped:Connect(updateNametags)
+	else
+		-- If disabled, disconnect live update and hide all nametags
+		if nameTagUpdateConnection then
+			nameTagUpdateConnection:Disconnect()
+			nameTagUpdateConnection = nil
+		end
+		for _, plr in ipairs(game.Players:GetPlayers()) do
+			if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
+				local head = plr.Character.Head
+				local nametag = head:FindFirstChild("Nametag")
+				if nametag then
+					nametag.Enabled = false
 				end
 			end
 		end
