@@ -19,9 +19,9 @@
        Page 2: Movement (WalkSpeed, JumpPower, Low Gravity)
        Page 3: OP (Fly, Noclip, Map Transparency, Highlight Players)
    - The Fly toggle uses an HD Admin–style fly handler with smooth rotation.
-   - On mobile, on-screen Up/Down buttons (outside the main menu) supply vertical input.
+   - On mobile, on-screen Up/Down buttons (outside the main menu) provide vertical input.
    - Disconnect and Rejoin buttons are placed in the main menu.
-   - A continuous collision update loop forces CanCollide = not noclipEnabled, so that when Fly+Noclip are both on, you can pass through ground/walls.
+   - A continuous collision update loop forces CanCollide = not noclipEnabled so that with Fly+Noclip enabled, you pass through obstacles.
 --]]
 
 
@@ -60,7 +60,6 @@ RunService.RenderStepped:Connect(function()
 	if character then
 		for _, part in pairs(character:GetDescendants()) do
 			if part:IsA("BasePart") then
-				-- Always force CanCollide = false if noclipEnabled is true.
 				part.CanCollide = not noclipEnabled
 			end
 		end
@@ -190,7 +189,7 @@ ButtonsScrollingFrame.Position = UDim2.new(0, 0, 0, 0)
 ButtonsScrollingFrame.Size = UDim2.new(0, 100, 0, 250)
 
 ---------------------------
--- CHEAT FRAMES (One Instance Each)
+-- CHEAT FRAMES (Single Instances)
 ---------------------------
 local Cheat1_Frame = Instance.new("Frame")
 Cheat1_Frame.Visible = true
@@ -481,9 +480,7 @@ HighlightAll.MouseButton1Click:Connect(function()
 			end
 		end
 		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character then
-				highlightCharacter(plr.Character)
-			end
+			if plr.Character then highlightCharacter(plr.Character) end
 			plr.CharacterAdded:Connect(highlightCharacter)
 		end
 		HighlightAll.Text = "Highlight All: On"
@@ -492,9 +489,7 @@ HighlightAll.MouseButton1Click:Connect(function()
 		for _, plr in pairs(Players:GetPlayers()) do
 			if plr.Character then
 				for _, child in ipairs(plr.Character:GetChildren()) do
-					if child:IsA("Highlight") then
-						child:Destroy()
-					end
+					if child:IsA("Highlight") then child:Destroy() end
 				end
 			end
 		end
@@ -519,9 +514,7 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 	local Players = game:GetService("Players")
 	local function isPlayerCharacter(object)
 		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character and object:IsDescendantOf(plr.Character) then
-				return true
-			end
+			if plr.Character and object:IsDescendantOf(plr.Character) then return true end
 		end
 		return false
 	end
@@ -551,8 +544,9 @@ UpButton.Text = "Up"
 UpButton.Font = Enum.Font.FredokaOne
 UpButton.TextScaled = true
 UpButton.BackgroundColor3 = Color3.new(0, 1, 0)
+-- Increased size for mobile (60x30)
 UpButton.Position = UDim2.new(0, 20, 1, -150)
-UpButton.Size = UDim2.new(0, 48, 0, 25)
+UpButton.Size = UDim2.new(0, 60, 0, 30)
 Instance.new("UICorner", UpButton)
 UpButton.Visible = false
 
@@ -563,8 +557,9 @@ DownButton.Text = "Down"
 DownButton.Font = Enum.Font.FredokaOne
 DownButton.TextScaled = true
 DownButton.BackgroundColor3 = Color3.new(1, 0, 0)
+-- Increased size for mobile (60x30)
 DownButton.Position = UDim2.new(0, 80, 1, -150)
-DownButton.Size = UDim2.new(0, 48, 0, 25)
+DownButton.Size = UDim2.new(0, 60, 0, 30)
 Instance.new("UICorner", DownButton)
 DownButton.Visible = false
 
@@ -585,31 +580,31 @@ local function startFly_HD()
 	local hrp = character:FindFirstChild("HumanoidRootPart")
 	local hum = character:FindFirstChildOfClass("Humanoid")
 	if not hrp or not hum then return end
-
+	
 	hum.PlatformStand = true
-
+	
 	if UIS.TouchEnabled then
 		oldGravity = workspace.Gravity
 		workspace.Gravity = 0
 		UpButton.Visible = true
 		DownButton.Visible = true
 	end
-
+	
 	bv = Instance.new("BodyVelocity", hrp)
 	bv.Velocity = Vector3.new(0, 0, 0)
 	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-
+	
 	bg = Instance.new("BodyGyro", hrp)
 	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
 	bg.CFrame = CFrame.new(hrp.Position, hrp.Position + workspace.CurrentCamera.CFrame.LookVector)
-
+	
 	hdFlying = true
 	local flyConn = RunService.RenderStepped:Connect(function()
 		if not hdFlying then
 			if flyConn then flyConn:Disconnect() end
 			return
 		end
-
+		
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
 		if UIS.TouchEnabled then
@@ -626,9 +621,9 @@ local function startFly_HD()
 			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
 			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
 		end
-
+		
 		if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
-
+		
 		bv.Velocity = moveDir * flySpeed
 		local targetCFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
 		bg.CFrame = bg.CFrame:Lerp(targetCFrame, 0.1)
