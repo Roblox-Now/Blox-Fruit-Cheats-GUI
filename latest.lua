@@ -658,15 +658,15 @@ SearchPlayer.Size = UDim2.new(0, 100, 0, 85)
 SearchPlayer.BackgroundColor3 = Color3.new(1, 0, 0)
 SearchPlayer.Name = "SearchPlayer"
 SearchPlayer.ZIndex = 2
-SearchPlayer.CanvasSize = UDim2.new(0, 0, 0, 0)  -- optional: adjust if needed
+SearchPlayer.CanvasSize = UDim2.new(0, 0, 0, 0) -- Optional: Adjust dynamically if needed
 
--- Automatically arrange buttons vertically.
+-- Automatically arrange buttons vertically
 local listLayout = Instance.new("UIListLayout", SearchPlayer)
 listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 5)
 
--- Create a refresh button that always stays at the top.
+-- Create a refresh button that always stays at the top
 local refreshButton = Instance.new("TextButton")
 refreshButton.Parent = SearchPlayer
 refreshButton.Size = UDim2.new(1, 0, 0, 20)
@@ -685,7 +685,7 @@ local function updatePlayerList()
 		end
 	end
 
-	-- Get all players, sort them alphabetically
+	-- Get and sort players alphabetically
 	local players = game.Players:GetPlayers()
 	table.sort(players, function(a, b)
 		return a.Name < b.Name
@@ -694,20 +694,21 @@ local function updatePlayerList()
 	-- Create a button for each player (except the local player)
 	for i, plr in ipairs(players) do
 		if plr ~= player then
-			-- Use a local variable to capture the current player
+			-- Capture the player reference in a local variable
 			local targetPlayer = plr
 			local tpButton = Instance.new("TextButton")
 			tpButton.Parent = SearchPlayer
-			-- Use full width of the scrolling frame
 			tpButton.Size = UDim2.new(1, 0, 0, 15)
-			-- LayoutOrder starts at 1, so refresh remains on top at 0.
-			tpButton.LayoutOrder = i  
+			tpButton.LayoutOrder = i  -- Keeps buttons ordered properly
 			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
 			tpButton.TextScaled = true
 			tpButton.Font = Enum.Font.FredokaOne
 			tpButton.Text = targetPlayer.Name
 			tpButton.ZIndex = 2
-			tpButton.MouseButton1Click:Connect(function()
+			Instance.new("UICorner", tpButton)
+
+			-- Fix event binding: Use Activated for mobile compatibility
+			tpButton.Activated:Connect(function()
 				if player.Character 
 					and player.Character:FindFirstChild("HumanoidRootPart") 
 					and targetPlayer.Character 
@@ -715,24 +716,19 @@ local function updatePlayerList()
 					player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
 				end
 			end)
-			Instance.new("UICorner", tpButton)
 		end
 	end
 end
 
+-- Refresh button updates the list when clicked
 refreshButton.MouseButton1Click:Connect(updatePlayerList)
 
 -- Initial update
 updatePlayerList()
 
--- Update the list automatically when players join or leave.
-game.Players.PlayerAdded:Connect(function(newPlayer)
-	updatePlayerList()
-end)
-
-game.Players.PlayerRemoving:Connect(function(leavingPlayer)
-	updatePlayerList()
-end)
+-- Update the list automatically when players join or leave
+game.Players.PlayerAdded:Connect(updatePlayerList)
+game.Players.PlayerRemoving:Connect(updatePlayerList)
 
 ---------------------------
 -- FPS LABEL
