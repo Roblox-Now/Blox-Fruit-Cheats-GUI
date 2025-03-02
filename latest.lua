@@ -1,4 +1,4 @@
---[[
+--[[ 
 ╔════════════════════════════════════════════════════╗
 ║  ██╗  ██╗ ██╗   ██╗ ██╗      ██████╗               ║
 ║  ██║  ██║ ╚██╗ ██╔╝ ██║     ██╔═══██╗              ║
@@ -9,22 +9,15 @@
 ║                                                    ║
 ║         Made By @Roblo1sjG / HYLO                  ║
 ╚════════════════════════════════════════════════════╝
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║   ██╗   ██╗███╗   ██╗██╗██╗   ██╗███████╗██████╗ ███████╗ █████╗ ██╗          ██████╗ ██╗   ██╗██╗     ║
+║   ██║   ██║████╗  ██║██║██║   ██║██╔════╝██╔══██╗██╔════╝██╔══██╗██║         ██╔════╝ ██║   ██║██║     ║
+║   ██║   ██║██╔██╗ ██║██║██║   ██║█████╗  ██████╔╝███████╗███████║██║         ██║  ███╗██║   ██║██║     ║
+║   ██║   ██║██║╚██╗██║██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚════██║██╔══██║██║         ██║   ██║██║   ██║██║     ║
+║   ╚██████╔╝██║ ╚████║██║ ╚████╔╝ ███████╗██║  ██║███████║██║  ██║███████╗    ╚██████╔╝╚██████╔╝██║     ║
+║    ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝     ╚═════╝  ╚═════╝ ╚═╝     ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ]]--
-
---[[ 
-   FULL CHEAT GUI SCRIPT WITH SMOOTH HD ADMIN–STYLE FLY HANDLING  
-   - DevMode bypasses any place-specific checks and uses Universal GUI texts.
-   - Cheat pages:
-       Page 1: Teleport (TP)
-       Page 2: Movement (WalkSpeed, JumpPower, Low Gravity)
-       Page 3: OP (Fly, Noclip, Map Transparency, Highlight Players, InstantRegen)
-   - The Fly toggle uses an HD Admin–style fly handler that freezes your body (PlatformStand = true) and smoothly rotates your character to follow the camera.
-   - A continuous collision update loop forces CanCollide = not noclipEnabled (use noclip to avoid kill bricks).
-   - A Tween–based drag function lets you reposition the MainFrame.
-   - A FlySpeedBox textbox (orange background, placeholder "Fly Speed") appears at the top–middle when fly mode is active.
-   - The InstantRegen button uses a Heartbeat connection to set your Humanoid’s Health/MaxHealth to 99999 and creates a ForceField.
---]]
-
 
 ---------------------------
 -- SETTINGS & VARIABLES
@@ -45,12 +38,17 @@ local TeleportService = game:GetService("TeleportService")
 local flyEnabled = false
 local noclipEnabled = false
 local flySpeed = 50
-local oldGravity = nil  -- for mobile
+local oldGravity = nil  -- for mobile gravity restore
+
+-- Mobile vertical control flags
+local mobileUp = false
+local mobileDown = false
 
 local Page = 1
+local regenConnection = nil  -- for InstantRegen
 
 ---------------------------
--- AUTO-RELOAD CHARACTER ON DEATH (Optional God-mode rejoin)
+-- AUTO-RELOAD CHARACTER ON DEATH (Optional)
 ---------------------------
 player.CharacterAdded:Connect(function(character)
 	local hum = character:WaitForChild("Humanoid")
@@ -103,11 +101,44 @@ MainFrame.Size = UDim2.new(0, 500, 0, 250)
 MainFrame.Position = UDim2.new(0.302, 0, 0.296, 0)
 Instance.new("UICorner", MainFrame)
 
+-- Title, Version, and Credits (Author) UI
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "Title"
+TitleLabel.Parent = MainFrame
+TitleLabel.BackgroundColor3 = Color3.new(0.784, 0, 1)
+TitleLabel.Position = UDim2.new(0.3, 0, -0.252, 0)
+TitleLabel.Size = UDim2.new(0, 200, 0, 35)
+TitleLabel.Text = titleText
+TitleLabel.TextScaled = true
+TitleLabel.Font = Enum.Font.FredokaOne
+Instance.new("UICorner", TitleLabel)
+
+local Version_Text = Instance.new("TextLabel")
+Version_Text.Name = "Version"
+Version_Text.Parent = TitleLabel
+Version_Text.Text = Menu_Version
+Version_Text.Font = Enum.Font.FredokaOne
+Version_Text.TextScaled = true
+Version_Text.BackgroundColor3 = Color3.new(0, 0.607, 1)
+Version_Text.Position = UDim2.new(0.5, 0, 1, 0)
+Version_Text.Size = UDim2.new(0, 100, 0, 15)
+Instance.new("UICorner", Version_Text)
+
+local Credits = Instance.new("TextLabel")
+Credits.Name = "Credits"
+Credits.Parent = MainFrame
+Credits.Position = UDim2.new(0, 0, 1.036, 0)
+Credits.Size = UDim2.new(0, 100, 0, 15)
+Credits.BackgroundColor3 = Color3.new(0, 0.784, 1)
+Credits.Font = Enum.Font.FredokaOne
+Credits.Text = "Made By @Roblo1sjG / HYLO"
+Credits.TextScaled = true
+Instance.new("UICorner", Credits)
+
 -- Tween-based Drag Function for MainFrame
-local dragToggle = nil
+local dragToggle = false
 local dragSpeed = 0.25
-local dragStart = nil
-local startPos = nil
+local dragStart, startPos
 
 local function updateInput(input)
 	local delta = input.Position - dragStart
@@ -146,64 +177,6 @@ OpenButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Disconnect & Rejoin Buttons (inside MainFrame)
-local DisconnectButton = Instance.new("TextButton")
-DisconnectButton.Name = "DisconnectButton"
-DisconnectButton.Text = "Disconnect"
-DisconnectButton.Parent = MainFrame
-DisconnectButton.Position = UDim2.new(0, 0, -0.254, 0)
-DisconnectButton.Size = UDim2.new(0, 110, 0, 25)
-DisconnectButton.Font = Enum.Font.FredokaOne
-DisconnectButton.TextScaled = true
-DisconnectButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-Instance.new("UICorner", DisconnectButton)
-DisconnectButton.MouseButton1Click:Connect(function() player:Kick("Disconnect.") end)
-
-local RejoinButton = Instance.new("TextButton")
-RejoinButton.Name = "RejoinButton"
-RejoinButton.Text = "Rejoin"
-RejoinButton.Parent = MainFrame
-RejoinButton.Position = UDim2.new(0, 0, -0.134, 0)
-RejoinButton.Size = UDim2.new(0, 110, 0, 25)
-RejoinButton.Font = Enum.Font.FredokaOne
-RejoinButton.TextScaled = true
-RejoinButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-Instance.new("UICorner", RejoinButton)
-RejoinButton.MouseButton1Click:Connect(function() TeleportService:Teleport(game.PlaceId, player) end)
-
-local Credits = Instance.new("TextLabel")
-Credits.Name = "Credits"
-Credits.Parent = MainFrame
-Credits.Position = UDim2.new(0, 0, 1.036, 0)
-Credits.Size = UDim2.new(0, 100, 0, 15)
-Credits.BackgroundColor3 = Color3.new(0, 0.784, 1)
-Credits.Font = Enum.Font.FredokaOne
-Credits.Text = "Made By @Roblo1sjG / HYLO"
-Credits.TextScaled = true
-Instance.new("UICorner", Credits)
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "Title"
-TitleLabel.Parent = MainFrame
-TitleLabel.BackgroundColor3 = Color3.new(0.784, 0, 1)
-TitleLabel.Position = UDim2.new(0.3, 0, -0.252, 0)
-TitleLabel.Size = UDim2.new(0, 200, 0, 35)
-TitleLabel.Text = titleText
-TitleLabel.TextScaled = true
-TitleLabel.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", TitleLabel)
-
-local Version_Text = Instance.new("TextLabel")
-Version_Text.Name = "Version"
-Version_Text.Parent = TitleLabel
-Version_Text.Text = Menu_Version
-Version_Text.Font = Enum.Font.FredokaOne
-Version_Text.TextScaled = true
-Version_Text.BackgroundColor3 = Color3.new(0, 0.607, 1)
-Version_Text.Position = UDim2.new(0.5, 0, 1, 0)
-Version_Text.Size = UDim2.new(0, 100, 0, 15)
-Instance.new("UICorner", Version_Text)
-
 ---------------------------
 -- SIDEBAR & CHEAT AREA SETUP
 ---------------------------
@@ -231,7 +204,7 @@ ButtonsScrollingFrame.Position = UDim2.new(0, 0, 0, 0)
 ButtonsScrollingFrame.Size = UDim2.new(0, 100, 0, 250)
 
 ---------------------------
--- CHEAT FRAMES (Single Instances)
+-- CHEAT FRAMES (Pages)
 ---------------------------
 local Cheat1_Frame = Instance.new("Frame")
 Cheat1_Frame.Visible = true
@@ -292,7 +265,7 @@ Cheat1_Button.BackgroundColor3 = Color3.new(1, 0.607, 0)
 Cheat1_Button.Position = UDim2.new(0.05, 0, 0.02, 0)
 Cheat1_Button.Size = UDim2.new(0, 90, 0, 25)
 Instance.new("UICorner", Cheat1_Button)
-Cheat1_Button.MouseButton1Click:Connect(function() Page = 1 updateCheatPages() end)
+Cheat1_Button.MouseButton1Click:Connect(function() Page = 1; updateCheatPages() end)
 
 local Cheat2_Button = Instance.new("TextButton")
 Cheat2_Button.Name = "MovementButton"
@@ -304,7 +277,7 @@ Cheat2_Button.BackgroundColor3 = Color3.new(1, 0.607843, 0)
 Cheat2_Button.Position = UDim2.new(0.05, 0, 0.10, 0)
 Cheat2_Button.Size = UDim2.new(0, 90, 0, 25)
 Instance.new("UICorner", Cheat2_Button)
-Cheat2_Button.MouseButton1Click:Connect(function() Page = 2 updateCheatPages() end)
+Cheat2_Button.MouseButton1Click:Connect(function() Page = 2; updateCheatPages() end)
 
 local Cheat3_Button = Instance.new("TextButton")
 Cheat3_Button.Name = "OPButton"
@@ -316,7 +289,7 @@ Cheat3_Button.BackgroundColor3 = Color3.new(1, 0.607843, 0)
 Cheat3_Button.Position = UDim2.new(0.05, 0, 0.18, 0)
 Cheat3_Button.Size = UDim2.new(0, 90, 0, 25)
 Instance.new("UICorner", Cheat3_Button)
-Cheat3_Button.MouseButton1Click:Connect(function() Page = 3 updateCheatPages() end)
+Cheat3_Button.MouseButton1Click:Connect(function() Page = 3; updateCheatPages() end)
 
 ---------------------------
 -- CHEAT PAGE 1: TELEPORT
@@ -357,17 +330,17 @@ ZPos.Font = Enum.Font.FredokaOne
 ZPos.Name = "ZPos"
 Instance.new("UICorner", ZPos)
 
-local ExecuteButton = Instance.new("TextButton")
-ExecuteButton.Parent = Cheat1_Frame
-ExecuteButton.Text = "Execute"
-ExecuteButton.Name = "ExecuteButton"
-ExecuteButton.BackgroundColor3 = Color3.new(1, 0.607, 0)
-ExecuteButton.Position = UDim2.new(0.25, 0, 0.72, 0)
-ExecuteButton.Size = UDim2.new(0, 200, 0, 50)
-ExecuteButton.Font = Enum.Font.FredokaOne
-ExecuteButton.TextScaled = true
-Instance.new("UICorner", ExecuteButton)
-ExecuteButton.MouseButton1Click:Connect(function()
+local ExecuteTPButton = Instance.new("TextButton")
+ExecuteTPButton.Parent = Cheat1_Frame
+ExecuteTPButton.Text = "Execute"
+ExecuteTPButton.Name = "ExecuteTPButton"
+ExecuteTPButton.BackgroundColor3 = Color3.new(1, 0.607, 0)
+ExecuteTPButton.Position = UDim2.new(0.25, 0, 0.72, 0)
+ExecuteTPButton.Size = UDim2.new(0, 200, 0, 50)
+ExecuteTPButton.Font = Enum.Font.FredokaOne
+ExecuteTPButton.TextScaled = true
+Instance.new("UICorner", ExecuteTPButton)
+ExecuteTPButton.MouseButton1Click:Connect(function()
 	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if hrp then
 		hrp.CFrame = CFrame.new(tonumber(XPos.Text), tonumber(YPos.Text), tonumber(ZPos.Text))
@@ -425,17 +398,17 @@ LG.MouseButton1Click:Connect(function()
 	end
 end)
 
-local ExecuteButton1 = Instance.new("TextButton")
-ExecuteButton1.Parent = Cheat2_Frame
-ExecuteButton1.Position = UDim2.new(0.087, 0, 0.58, 0)
-ExecuteButton1.Size = UDim2.new(0, 100, 0, 25)
-ExecuteButton1.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-ExecuteButton1.TextScaled = true
-ExecuteButton1.Font = Enum.Font.FredokaOne
-ExecuteButton1.Text = "Execute"
-ExecuteButton1.Name = "ExecuteButton1"
-Instance.new("UICorner", ExecuteButton1)
-ExecuteButton1.MouseButton1Click:Connect(function()
+local ExecuteWSButton = Instance.new("TextButton")
+ExecuteWSButton.Parent = Cheat2_Frame
+ExecuteWSButton.Position = UDim2.new(0.087, 0, 0.58, 0)
+ExecuteWSButton.Size = UDim2.new(0, 100, 0, 25)
+ExecuteWSButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+ExecuteWSButton.TextScaled = true
+ExecuteWSButton.Font = Enum.Font.FredokaOne
+ExecuteWSButton.Text = "Execute"
+ExecuteWSButton.Name = "ExecuteWSButton"
+Instance.new("UICorner", ExecuteWSButton)
+ExecuteWSButton.MouseButton1Click:Connect(function()
 	local wsVal = tonumber(WS.Text) or 16
 	local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
 	if humanoid then
@@ -444,17 +417,17 @@ ExecuteButton1.MouseButton1Click:Connect(function()
 	end
 end)
 
-local ExecuteButton2 = Instance.new("TextButton")
-ExecuteButton2.Parent = Cheat2_Frame
-ExecuteButton2.Position = UDim2.new(0.375, 0, 0.58, 0)
-ExecuteButton2.Size = UDim2.new(0, 100, 0, 25)
-ExecuteButton2.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-ExecuteButton2.TextScaled = true
-ExecuteButton2.Font = Enum.Font.FredokaOne
-ExecuteButton2.Text = "Execute"
-ExecuteButton2.Name = "ExecuteButton2"
-Instance.new("UICorner", ExecuteButton2)
-ExecuteButton2.MouseButton1Click:Connect(function()
+local ExecuteJPButton = Instance.new("TextButton")
+ExecuteJPButton.Parent = Cheat2_Frame
+ExecuteJPButton.Position = UDim2.new(0.375, 0, 0.58, 0)
+ExecuteJPButton.Size = UDim2.new(0, 100, 0, 25)
+ExecuteJPButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+ExecuteJPButton.TextScaled = true
+ExecuteJPButton.Font = Enum.Font.FredokaOne
+ExecuteJPButton.Text = "Execute"
+ExecuteJPButton.Name = "ExecuteJPButton"
+Instance.new("UICorner", ExecuteJPButton)
+ExecuteJPButton.MouseButton1Click:Connect(function()
 	local jpVal = tonumber(JP.Text) or 50
 	local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
 	if humanoid then
@@ -464,7 +437,7 @@ ExecuteButton2.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- CHEAT PAGE 3: OP (Fly, Noclip, Map Transparency, Highlight, InstantRegen)
+-- CHEAT PAGE 3: OP (Fly, Noclip, Map Transparency, Highlight, InstantRegen, Refresh)
 ---------------------------
 local MT = Instance.new("TextBox")
 MT.Parent = Cheat3_Frame
@@ -512,8 +485,6 @@ HighlightAll.Name = "HighlightAll"
 Instance.new("UICorner", HighlightAll)
 HighlightAll.ZIndex = 2
 
--- InstantRegen with ForceField and auto-enabling noclip
-local regenConnection
 local InstantRegen = Instance.new("TextButton")
 InstantRegen.Parent = Cheat3_Frame
 InstantRegen.Position = UDim2.new(0.375, 0, 0.58, 0)
@@ -526,11 +497,256 @@ InstantRegen.Name = "InstantRegen"
 Instance.new("UICorner", InstantRegen)
 InstantRegen.ZIndex = 2
 
+local RefreshCharacter = Instance.new("TextButton")
+RefreshCharacter.Parent = MainFrame
+RefreshCharacter.Position = UDim2.new(0.25, 0, -0.094, 0)
+RefreshCharacter.Size = UDim2.new(0, 100, 0, 15)
+RefreshCharacter.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+RefreshCharacter.TextScaled = true
+RefreshCharacter.Font = Enum.Font.FredokaOne
+RefreshCharacter.Text = "RefreshCharacter"
+RefreshCharacter.Name = "RefreshCharacter"
+Instance.new("UICorner", RefreshCharacter)
+RefreshCharacter.ZIndex = 2
+RefreshCharacter.MouseButton1Click:Connect(function()
+	local character = player.Character
+	if character and character:FindFirstChild("Humanoid") then
+		character.Humanoid.Health = 0
+	end
+end)
+
+local ExecuteTransButton = Instance.new("TextButton")
+ExecuteTransButton.Parent = Cheat3_Frame
+ExecuteTransButton.Text = "Execute"
+ExecuteTransButton.Name = "ExecuteTransButton"
+-- Changed the position per request:
+ExecuteTransButton.Position = UDim2.new(0.087, 0, 0.58, 0)
+ExecuteTransButton.Size = UDim2.new(0, 100, 0, 25)
+ExecuteTransButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+ExecuteTransButton.TextScaled = true
+ExecuteTransButton.Font = Enum.Font.FredokaOne
+Instance.new("UICorner", ExecuteTransButton)
+ExecuteTransButton.MouseButton1Click:Connect(function()
+	local transparencyValue = tonumber(MT.Text) or 0.5
+	local ws = game:GetService("Workspace")
+	local Players = game:GetService("Players")
+	local function isPlayerCharacter(object)
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character and object:IsDescendantOf(plr.Character) then return true end
+		end
+		return false
+	end
+	local function applyTransparency()
+		local count = 0
+		for _, obj in pairs(ws:GetDescendants()) do
+			if obj:IsA("BasePart") and not isPlayerCharacter(obj) then
+				obj.Transparency = transparencyValue
+				count = count + 1
+			end
+		end
+		print("Transparency applied to", count, "map parts")
+	end
+	repeat wait() until player:FindFirstChild("PlayerGui")
+	print("Starting transparency change...")
+	applyTransparency()
+	print("Transparency change complete!")
+end)
+
+---------------------------
+-- FLY SPEED TEXTBOX & MOBILE FLY BUTTONS (for mobile)
+---------------------------
+local FlySpeedBox = Instance.new("TextBox")
+FlySpeedBox.Name = "FlySpeedBox"
+FlySpeedBox.Parent = MainGui
+FlySpeedBox.Position = UDim2.new(0.5, -50, 0, 20)
+FlySpeedBox.Size = UDim2.new(0, 100, 0, 30)
+FlySpeedBox.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+FlySpeedBox.TextScaled = true
+FlySpeedBox.Font = Enum.Font.FredokaOne
+FlySpeedBox.PlaceholderText = "Fly Speed"
+FlySpeedBox.Text = tostring(flySpeed)
+Instance.new("UICorner", FlySpeedBox)
+FlySpeedBox.Visible = false
+
+FlySpeedBox.FocusLost:Connect(function()
+	local newSpeed = tonumber(FlySpeedBox.Text)
+	if newSpeed then
+		flySpeed = newSpeed
+	else
+		FlySpeedBox.Text = tostring(flySpeed)
+	end
+end)
+
+local UpButton = Instance.new("TextButton")
+UpButton.Name = "UpButton"
+UpButton.Parent = MainGui
+UpButton.Text = "Up"
+UpButton.Font = Enum.Font.FredokaOne
+UpButton.TextScaled = true
+UpButton.BackgroundColor3 = Color3.new(0, 1, 0)
+UpButton.Position = UDim2.new(0, 20, 1, -150)
+UpButton.Size = UDim2.new(0, 48, 0, 25)
+Instance.new("UICorner", UpButton)
+UpButton.Visible = false
+
+local DownButton = Instance.new("TextButton")
+DownButton.Name = "DownButton"
+DownButton.Parent = MainGui
+DownButton.Text = "Down"
+DownButton.Font = Enum.Font.FredokaOne
+DownButton.TextScaled = true
+DownButton.BackgroundColor3 = Color3.new(1, 0, 0)
+DownButton.Position = UDim2.new(0, 80, 1, -150)
+DownButton.Size = UDim2.new(0, 48, 0, 25)
+Instance.new("UICorner", DownButton)
+DownButton.Visible = false
+
+UpButton.MouseButton1Down:Connect(function() mobileUp = true end)
+UpButton.MouseButton1Up:Connect(function() mobileUp = false end)
+DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
+DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
+
+---------------------------
+-- FLY HANDLING (HD Admin–Style: Freeze Body & Smoothly Follow Camera)
+---------------------------
+local bv, bg  -- BodyVelocity and BodyGyro
+local hdFlying = false
+
+local function startFly_HD()
+	local character = player.Character
+	if not character then return end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local hum = character:FindFirstChildOfClass("Humanoid")
+	if not hrp or not hum then return end
+
+	hum.PlatformStand = true
+	FlySpeedBox.Visible = true
+	if UIS.TouchEnabled then
+		UpButton.Visible = true
+		DownButton.Visible = true
+		oldGravity = workspace.Gravity
+		workspace.Gravity = 0
+	end
+
+	bv = Instance.new("BodyVelocity", hrp)
+	bv.Velocity = Vector3.new(0, 0, 0)
+	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+
+	bg = Instance.new("BodyGyro", hrp)
+	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+	bg.CFrame = workspace.CurrentCamera.CFrame
+
+	hdFlying = true
+	local flyConn = RunService.RenderStepped:Connect(function()
+		if not hdFlying then
+			if flyConn then flyConn:Disconnect() end
+			return
+		end
+
+		local cam = workspace.CurrentCamera
+		local moveDir = Vector3.new(0, 0, 0)
+		if UIS.TouchEnabled then
+			local horizontal = hum.MoveDirection
+			local vertical = 0
+			if mobileUp then vertical = vertical + 1 end
+			if mobileDown then vertical = vertical - 1 end
+			moveDir = Vector3.new(horizontal.X, vertical, horizontal.Z)
+		else
+			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+		end
+
+		if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
+		bv.Velocity = moveDir * flySpeed
+		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.1)
+	end)
+end
+
+local function stopFly_HD()
+	hdFlying = false
+	local character = player.Character
+	if character then
+		local hum = character:FindFirstChildOfClass("Humanoid")
+		if hum then hum.PlatformStand = false end
+	end
+	if bv then
+		bv:Destroy() 
+		bv = nil
+	end
+	if bg then
+		bg:Destroy() 
+		bg = nil
+	end
+	if UIS.TouchEnabled and oldGravity then
+		workspace.Gravity = oldGravity
+		oldGravity = nil
+	end
+	FlySpeedBox.Visible = false
+	UpButton.Visible = false
+	DownButton.Visible = false
+end
+
+Fly.MouseButton1Click:Connect(function()
+	if not flyEnabled then
+		flyEnabled = true
+		startFly_HD()
+		Fly.Text = "Fly: On"
+		Fly.BackgroundColor3 = Color3.new(0, 1, 0)
+	else
+		flyEnabled = false
+		stopFly_HD()
+		Fly.Text = "Fly: Off"
+		Fly.BackgroundColor3 = Color3.new(1, 0, 0)
+	end
+end)
+
+Noclip.MouseButton1Click:Connect(function()
+	noclipEnabled = not noclipEnabled
+	if noclipEnabled then
+		Noclip.Text = "Noclip: On"
+		Noclip.BackgroundColor3 = Color3.new(0, 1, 0)
+	else
+		Noclip.Text = "Noclip: Off"
+		Noclip.BackgroundColor3 = Color3.new(1, 0, 0)
+	end
+end)
+
+HighlightAll.MouseButton1Click:Connect(function()
+	local Players = game:GetService("Players")
+	if HighlightAll.Text == "Highlight All: Off" then
+		local function highlightCharacter(character)
+			if character and not character:FindFirstChildOfClass("Highlight") then
+				local hl = Instance.new("Highlight")
+				hl.Parent = character
+			end
+		end
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character then highlightCharacter(plr.Character) end
+			plr.CharacterAdded:Connect(highlightCharacter)
+		end
+		HighlightAll.Text = "Highlight All: On"
+		HighlightAll.BackgroundColor3 = Color3.new(0, 1, 0)
+	else
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character then
+				for _, child in ipairs(plr.Character:GetChildren()) do
+					if child:IsA("Highlight") then child:Destroy() end
+				end
+			end
+		end
+		HighlightAll.Text = "Highlight All: Off"
+		HighlightAll.BackgroundColor3 = Color3.new(1, 0, 0)
+	end
+end)
+
 InstantRegen.MouseButton1Click:Connect(function()
 	if InstantRegen.Text == "InstantRegen: Off" then
 		InstantRegen.Text = "InstantRegen: On"
 		InstantRegen.BackgroundColor3 = Color3.new(0, 1, 0)
-		-- Enable noclip to avoid kill bricks
 		noclipEnabled = true
 		regenConnection = RunService.Heartbeat:Connect(function()
 			local character = player.Character
@@ -558,250 +774,6 @@ InstantRegen.MouseButton1Click:Connect(function()
 			local ff = character:FindFirstChild("ForceField")
 			if ff then ff:Destroy() end
 		end
-	end
-end)
-
-local ExecuteButton3 = Instance.new("TextButton")
-ExecuteButton3.Parent = Cheat3_Frame
-ExecuteButton3.Position = UDim2.new(0.087, 0, 0.58, 0)
-ExecuteButton3.Size = UDim2.new(0, 100, 0, 25)
-ExecuteButton3.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-ExecuteButton3.TextScaled = true
-ExecuteButton3.Font = Enum.Font.FredokaOne
-ExecuteButton3.Text = "Execute"
-ExecuteButton3.Name = "ExecuteButton3"
-Instance.new("UICorner", ExecuteButton3)
-ExecuteButton3.MouseButton1Click:Connect(function()
-	local transparencyValue = tonumber(MT.Text) or 0.5
-	local ws = game:GetService("Workspace")
-	local Players = game:GetService("Players")
-	local function isPlayerCharacter(object)
-		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character and object:IsDescendantOf(plr.Character) then return true end
-		end
-		return false
-	end
-	local function applyTransparency()
-		local count = 0
-		for _, obj in pairs(ws:GetDescendants()) do
-			if obj:IsA("BasePart") and not isPlayerCharacter(obj) then
-				obj.Transparency = transparencyValue
-				count = count + 1
-			end
-		end
-		print("Transparency applied to", count, "map parts")
-	end
-	repeat wait() until player:FindFirstChild("PlayerGui")
-	print("Starting transparency change...")
-	applyTransparency()
-	print("Transparency change complete!")
-end)
-
----------------------------
--- FLY SPEED TEXTBOX (Placed at top–middle, always visible when fly is active)
----------------------------
-local FlySpeedBox = Instance.new("TextBox")
-FlySpeedBox.Name = "FlySpeedBox"
-FlySpeedBox.Parent = MainGui
-FlySpeedBox.Position = UDim2.new(0.5, -50, 0, 20)  -- Top–middle
-FlySpeedBox.Size = UDim2.new(0, 100, 0, 30)
-FlySpeedBox.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-FlySpeedBox.TextScaled = true
-FlySpeedBox.Font = Enum.Font.FredokaOne
-FlySpeedBox.PlaceholderText = "Fly Speed"
-FlySpeedBox.Text = tostring(flySpeed)
-Instance.new("UICorner", FlySpeedBox)
-FlySpeedBox.Visible = false
-
-FlySpeedBox.FocusLost:Connect(function(enterPressed)
-	local newSpeed = tonumber(FlySpeedBox.Text)
-	if newSpeed then
-		flySpeed = newSpeed
-	else
-		FlySpeedBox.Text = tostring(flySpeed)
-	end
-end)
-
----------------------------
--- FLY HANDLING (HD Admin–Style: Freezes Body and Follows Camera Smoothly)
----------------------------
-local bv, bg  -- BodyVelocity and BodyGyro
-local hdFlying = false
-
-local function startFly_HD()
-	local character = player.Character
-	if not character then return end
-	local hrp = character:FindFirstChild("HumanoidRootPart")
-	local hum = character:FindFirstChildOfClass("Humanoid")
-	if not hrp or not hum then return end
-
-	-- Freeze your body
-	hum.PlatformStand = true
-
-	-- Always show the FlySpeedBox when flying
-	FlySpeedBox.Visible = true
-
-	if UIS.TouchEnabled then
-		oldGravity = workspace.Gravity
-		workspace.Gravity = 0
-	end
-
-	bv = Instance.new("BodyVelocity", hrp)
-	bv.Velocity = Vector3.new(0, 0, 0)
-	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-
-	bg = Instance.new("BodyGyro", hrp)
-	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-	-- Set initial rotation to camera's current CFrame
-	bg.CFrame = workspace.CurrentCamera.CFrame
-
-	hdFlying = true
-	local flyConn = RunService.RenderStepped:Connect(function()
-		if not hdFlying then
-			if flyConn then flyConn:Disconnect() end
-			return
-		end
-
-		local cam = workspace.CurrentCamera
-		local moveDir = Vector3.new(0, 0, 0)
-		-- PC controls
-		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
-		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-
-		-- Normalize movement
-		if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
-
-		bv.Velocity = moveDir * flySpeed
-		-- Smoothly rotate your character to match the camera's orientation
-		local targetCFrame = cam.CFrame
-		bg.CFrame = bg.CFrame:Lerp(targetCFrame, 0.1)
-	end)
-end
-
-local function stopFly_HD()
-	hdFlying = false
-	local character = player.Character
-	if character then
-		local hum = character:FindFirstChildOfClass("Humanoid")
-		if hum then hum.PlatformStand = false end
-	end
-	if bv then
-		bv:Destroy() bv = nil
-	end
-	if bg then
-		bg:Destroy() bg = nil
-	end
-	if UIS.TouchEnabled and oldGravity then
-		workspace.Gravity = oldGravity
-		oldGravity = nil
-	end
-	FlySpeedBox.Visible = false
-end
-
-Fly.MouseButton1Click:Connect(function()
-	if not flyEnabled then
-		flyEnabled = true
-		startFly_HD()
-		Fly.Text = "Fly: On"
-		Fly.BackgroundColor3 = Color3.new(0, 1, 0)
-		FlySpeedBox.Visible = true
-	else
-		flyEnabled = false
-		stopFly_HD()
-		Fly.Text = "Fly: Off"
-		Fly.BackgroundColor3 = Color3.new(1, 0, 0)
-		FlySpeedBox.Visible = false
-	end
-end)
-
-Noclip.MouseButton1Click:Connect(function()
-	noclipEnabled = not noclipEnabled
-	if noclipEnabled then
-		Noclip.Text = "Noclip: On"
-		Noclip.BackgroundColor3 = Color3.new(0, 1, 0)
-	else
-		Noclip.Text = "Noclip: Off"
-		Noclip.BackgroundColor3 = Color3.new(1, 0, 0)
-	end
-end)
-
-local ExecuteButton3 = Instance.new("TextButton")
-ExecuteButton3.Parent = Cheat3_Frame
-ExecuteButton3.Position = UDim2.new(0.087, 0, 0.58, 0)
-ExecuteButton3.Size = UDim2.new(0, 100, 0, 25)
-ExecuteButton3.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-ExecuteButton3.TextScaled = true
-ExecuteButton3.Font = Enum.Font.FredokaOne
-ExecuteButton3.Text = "Execute"
-ExecuteButton3.Name = "ExecuteButton3"
-Instance.new("UICorner", ExecuteButton3)
-ExecuteButton3.MouseButton1Click:Connect(function()
-	local transparencyValue = tonumber(MT.Text) or 0.5
-	local ws = game:GetService("Workspace")
-	local Players = game:GetService("Players")
-	local function isPlayerCharacter(object)
-		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character and object:IsDescendantOf(plr.Character) then return true end
-		end
-		return false
-	end
-	local function applyTransparency()
-		local count = 0
-		for _, obj in pairs(ws:GetDescendants()) do
-			if obj:IsA("BasePart") and not isPlayerCharacter(obj) then
-				obj.Transparency = transparencyValue
-				count = count + 1
-			end
-		end
-		print("Transparency applied to", count, "map parts")
-	end
-	repeat wait() until player:FindFirstChild("PlayerGui")
-	print("Starting transparency change...")
-	applyTransparency()
-	print("Transparency change complete!")
-end)
-
-local HighlightAll = Instance.new("TextButton")
-HighlightAll.Parent = Cheat3_Frame
-HighlightAll.Position = UDim2.new(0.675, 0, 0.58, 0)
-HighlightAll.Size = UDim2.new(0, 100, 0, 25)
-HighlightAll.BackgroundColor3 = Color3.new(1, 0, 0)
-HighlightAll.TextScaled = true
-HighlightAll.Font = Enum.Font.FredokaOne
-HighlightAll.Text = "Highlight All: Off"
-HighlightAll.Name = "HighlightAll"
-Instance.new("UICorner", HighlightAll)
-HighlightAll.ZIndex = 2
-
-HighlightAll.MouseButton1Click:Connect(function()
-	local Players = game:GetService("Players")
-	if HighlightAll.Text == "Highlight All: Off" then
-		local function highlightCharacter(character)
-			if character and not character:FindFirstChildOfClass("Highlight") then
-				local hl = Instance.new("Highlight")
-				hl.Parent = character
-			end
-		end
-		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character then highlightCharacter(plr.Character) end
-			plr.CharacterAdded:Connect(highlightCharacter)
-		end
-		HighlightAll.Text = "Highlight All: On"
-		HighlightAll.BackgroundColor3 = Color3.new(0, 1, 0)
-	else
-		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character then
-				for _, child in ipairs(plr.Character:GetChildren()) do
-					if child:IsA("Highlight") then child:Destroy() end
-				end
-			end
-		end
-		HighlightAll.Text = "Highlight All: Off"
-		HighlightAll.BackgroundColor3 = Color3.new(1, 0, 0)
 	end
 end)
 
