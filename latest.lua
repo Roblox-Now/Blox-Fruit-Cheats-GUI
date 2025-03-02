@@ -135,6 +135,35 @@ Credits.Text = "Made By @Roblo1sjG / HYLO"
 Credits.TextScaled = true
 Instance.new("UICorner", Credits)
 
+-- Disconnect & Rejoin Buttons (inside MainFrame)
+local DisconnectButton = Instance.new("TextButton")
+DisconnectButton.Name = "DisconnectButton"
+DisconnectButton.Text = "Disconnect"
+DisconnectButton.Parent = MainFrame
+DisconnectButton.Position = UDim2.new(0, 0, -0.254, 0)
+DisconnectButton.Size = UDim2.new(0, 110, 0, 25)
+DisconnectButton.Font = Enum.Font.FredokaOne
+DisconnectButton.TextScaled = true
+DisconnectButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+Instance.new("UICorner", DisconnectButton)
+DisconnectButton.MouseButton1Click:Connect(function() 
+	player:Kick("Disconnect.") 
+end)
+
+local RejoinButton = Instance.new("TextButton")
+RejoinButton.Name = "RejoinButton"
+RejoinButton.Text = "Rejoin"
+RejoinButton.Parent = MainFrame
+RejoinButton.Position = UDim2.new(0, 0, -0.134, 0)
+RejoinButton.Size = UDim2.new(0, 110, 0, 25)
+RejoinButton.Font = Enum.Font.FredokaOne
+RejoinButton.TextScaled = true
+RejoinButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+Instance.new("UICorner", RejoinButton)
+RejoinButton.MouseButton1Click:Connect(function() 
+	TeleportService:Teleport(game.PlaceId, player) 
+end)
+
 -- Tween-based Drag Function for MainFrame
 local dragToggle = false
 local dragSpeed = 0.25
@@ -519,7 +548,7 @@ local ExecuteTransButton = Instance.new("TextButton")
 ExecuteTransButton.Parent = Cheat3_Frame
 ExecuteTransButton.Text = "Execute"
 ExecuteTransButton.Name = "ExecuteTransButton"
--- Changed the position per request:
+-- Updated position per request:
 ExecuteTransButton.Position = UDim2.new(0.087, 0, 0.58, 0)
 ExecuteTransButton.Size = UDim2.new(0, 100, 0, 25)
 ExecuteTransButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
