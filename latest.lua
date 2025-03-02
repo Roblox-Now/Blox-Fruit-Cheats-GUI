@@ -673,12 +673,19 @@ local function updatePlayerList()
 		end
 	end
 
-	for i, plr in ipairs(game.Players:GetPlayers()) do
+	-- Get and sort players alphabetically
+	local players = game.Players:GetPlayers()
+	table.sort(players, function(a, b)
+		return a.Name < b.Name
+	end)
+
+	-- Create a button for each player (except the local player)
+	for i, plr in ipairs(players) do
 		if plr ~= player then
 			local tpButton = Instance.new("TextButton")
 			tpButton.Parent = SearchPlayer
 			tpButton.Size = UDim2.new(0, 85, 0, 15)
-			tpButton.LayoutOrder = i
+			tpButton.LayoutOrder = i  -- ensures buttons are in sorted order
 			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
 			tpButton.TextScaled = true
 			tpButton.Font = Enum.Font.FredokaOne
@@ -696,6 +703,19 @@ local function updatePlayerList()
 		end
 	end
 end
+
+-- Initial update
+updatePlayerList()
+
+-- Update the list when players join or leave
+game.Players.PlayerAdded:Connect(function(newPlayer)
+	updatePlayerList()
+end)
+
+game.Players.PlayerRemoving:Connect(function(leavingPlayer)
+	updatePlayerList()
+end)
+
 
 -- Initial update
 updatePlayerList()
