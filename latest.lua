@@ -23,7 +23,7 @@
 -- SETTINGS & VARIABLES
 ---------------------------
 local DevMode = true
-local Menu_Version = "V1.0.5 BETA"
+local Menu_Version = "V1.1.1 BETA"
 local Menu_Name = "Universal GUI"
 local titleText = "Universal GUI"
 
@@ -32,6 +32,7 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
 
 local flyEnabled = false
 local noclipEnabled = false
@@ -54,11 +55,9 @@ local mainframeTweenTime = 0.25
 ---------------------------
 player.CharacterAdded:Connect(function(character)
 	local hum = character:WaitForChild("Humanoid")
-	hum.StateChanged:Connect(function(_, newState)
-		if newState == Enum.HumanoidStateType.Dead then
-			wait(0.1)
-			player:LoadCharacter()
-		end
+	hum.Died:Connect(function()
+		wait(0.1)
+		player:LoadCharacter()
 	end)
 end)
 
@@ -80,7 +79,7 @@ end)
 -- MAIN GUI SETUP
 ---------------------------
 local MainGui = Instance.new("ScreenGui")
-MainGui.Parent = player.PlayerGui
+MainGui.Parent = player:FindFirstChildOfClass("PlayerGui")
 MainGui.Name = Menu_Name
 
 -- OpenButton as ImageButton using provided asset ID
@@ -89,7 +88,7 @@ OpenButton.Name = "OpenButton"
 OpenButton.Parent = MainGui
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
 OpenButton.Position = UDim2.new(0.032, 0, 0.386, 0)
-OpenButton.AnchorPoint = Vector2.new(0.5, 0.5)  -- Scale from center
+OpenButton.AnchorPoint = Vector2.new(0.5, 0.5)
 Instance.new("UICorner", OpenButton)
 OpenButton.Image = "http://www.roblox.com/asset/?id=104276980467632"
 OpenButton.ImageColor3 = Color3.new(1, 1, 1)
@@ -113,27 +112,25 @@ OpenButton.MouseLeave:Connect(function()
 end)
 
 ---------------------------
--- MAINFRAME SETUP (Original layout for buttons restored)
+-- MAINFRAME SETUP
 ---------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = MainGui
 MainFrame.BackgroundColor3 = Color3.new(0, 0, 0)
 MainFrame.Visible = false
--- Original layout values (do not change these)
 local originalPos = UDim2.new(0.302, 0, 0.296, 0)
 local originalSize = UDim2.new(0, 500, 0, 250)
 MainFrame.Position = originalPos
 MainFrame.Size = originalSize
 Instance.new("UICorner", MainFrame)
 
--- Compute the center of MainFrame (absolute center based on its original size/position)
 local centerPos = UDim2.new(
 	originalPos.X.Scale, originalPos.X.Offset + originalSize.X.Offset/2,
 	originalPos.Y.Scale, originalPos.Y.Offset + originalSize.Y.Offset/2
 )
 
--- Title, Version, and Credits (as originally laid out)
+-- Title, Version, and Credits
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "Title"
 TitleLabel.Parent = MainFrame
@@ -167,7 +164,7 @@ Credits.Text = "Made By @Roblo1sjG / HYLO"
 Credits.TextScaled = true
 Instance.new("UICorner", Credits)
 
--- Disconnect & Rejoin Buttons (original positions/sizes)
+-- Disconnect & Rejoin Buttons
 local DisconnectButton = Instance.new("TextButton")
 DisconnectButton.Name = "DisconnectButton"
 DisconnectButton.Text = "Disconnect"
@@ -197,7 +194,7 @@ RejoinButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- DRAGGABLE FUNCTION (unchanged)
+-- DRAGGABLE FUNCTION
 ---------------------------
 local function makeDraggable(guiObject)
 	local dragToggle = false
@@ -226,7 +223,6 @@ local function makeDraggable(guiObject)
 	end)
 end
 
--- Apply draggable behavior to MainFrame and OpenButton
 makeDraggable(MainFrame)
 makeDraggable(OpenButton)
 
@@ -244,19 +240,18 @@ OpenButton.MouseButton1Click:Connect(function()
 	end)
 
 	if MainFrame.Visible then
-		-- When closing, tween MainFrame to 0 size at center
+		-- Closing: tween to 0 size at center
 		local tweenClose1 = TweenService:Create(MainFrame, TweenInfo.new(mainframeTweenTime), {Size = UDim2.new(0, 0, 0, 0)})
 		local tweenClose2 = TweenService:Create(MainFrame, TweenInfo.new(mainframeTweenTime), {Position = centerPos})
 		tweenClose1:Play()
 		tweenClose2:Play()
 		tweenClose1.Completed:Connect(function()
 			MainFrame.Visible = false
-			-- Reset layout
 			MainFrame.Size = originalSize
 			MainFrame.Position = originalPos
 		end)
 	else
-		-- When opening, start at center with 0 size and tween to original layout
+		-- Opening: start at center with 0 size then tween to layout
 		MainFrame.Position = centerPos
 		MainFrame.Size = UDim2.new(0, 0, 0, 0)
 		MainFrame.Visible = true
@@ -268,7 +263,7 @@ OpenButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- SIDEBAR & CHEAT AREA SETUP (Original layout)
+-- SIDEBAR & CHEAT AREA SETUP
 ---------------------------
 local SideBarFrame = Instance.new("Frame")
 SideBarFrame.Parent = MainFrame
@@ -294,7 +289,7 @@ ButtonsScrollingFrame.Position = UDim2.new(0, 0, 0, 0)
 ButtonsScrollingFrame.Size = UDim2.new(0, 100, 0, 250)
 
 ---------------------------
--- CHEAT FRAMES (Pages) (Original layout)
+-- CHEAT FRAMES (Pages)
 ---------------------------
 local Cheat1_Frame = Instance.new("Frame")
 Cheat1_Frame.Visible = true
@@ -343,7 +338,7 @@ local function updateCheatPages()
 end
 
 ---------------------------
--- SIDEBAR BUTTONS (Original layout)
+-- SIDEBAR BUTTONS
 ---------------------------
 local Cheat1_Button = Instance.new("TextButton")
 Cheat1_Button.Name = "TPButton"
@@ -382,14 +377,14 @@ Instance.new("UICorner", Cheat3_Button)
 Cheat3_Button.MouseButton1Click:Connect(function() Page = 3; updateCheatPages() end)
 
 ---------------------------
--- CHEAT PAGE 1: TELEPORT (Original layout)
+-- CHEAT PAGE 1: TELEPORT
 ---------------------------
 local XPos = Instance.new("TextBox")
 XPos.TextScaled = true
 XPos.PlaceholderText = "X Coordinates"
 XPos.Parent = Cheat1_Frame
 XPos.Text = ""
-XPos.Position = UDim2.new(0.087, 0, 0.42, 0)
+XPos.Position = UDim2.new(0.087, 0, 0.532, 0)
 XPos.Size = UDim2.new(0, 100, 0, 25)
 XPos.BackgroundColor3 = Color3.new(1, 1, 1)
 XPos.Font = Enum.Font.FredokaOne
@@ -401,7 +396,7 @@ YPos.TextScaled = true
 YPos.PlaceholderText = "Y Coordinates"
 YPos.Parent = Cheat1_Frame
 YPos.Text = ""
-YPos.Position = UDim2.new(0.375, 0, 0.42, 0)
+YPos.Position = UDim2.new(0.375, 0, 0.532, 0)
 YPos.Size = UDim2.new(0, 100, 0, 25)
 YPos.BackgroundColor3 = Color3.new(1, 1, 1)
 YPos.Font = Enum.Font.FredokaOne
@@ -413,7 +408,7 @@ ZPos.TextScaled = true
 ZPos.PlaceholderText = "Z Coordinates"
 ZPos.Parent = Cheat1_Frame
 ZPos.Text = ""
-ZPos.Position = UDim2.new(0.663, 0, 0.42, 0)
+ZPos.Position = UDim2.new(0.663, 0, 0.532, 0)
 ZPos.Size = UDim2.new(0, 100, 0, 25)
 ZPos.BackgroundColor3 = Color3.new(1, 1, 1)
 ZPos.Font = Enum.Font.FredokaOne
@@ -438,7 +433,7 @@ ExecuteTPButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- CHEAT PAGE 2: MOVEMENT (Original layout)
+-- CHEAT PAGE 2: MOVEMENT
 ---------------------------
 local WS = Instance.new("TextBox")
 WS.Parent = Cheat2_Frame
@@ -527,7 +522,7 @@ ExecuteJPButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- CHEAT PAGE 3: OP (Original layout)
+-- CHEAT PAGE 3: OP
 ---------------------------
 local MT = Instance.new("TextBox")
 MT.Parent = Cheat3_Frame
@@ -606,7 +601,7 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (Original layout)
+-- NAME TAG ALL
 ---------------------------
 local nameTagAllEnabled = false
 local nameTagUpdateConnection = nil
@@ -623,105 +618,123 @@ NameTagAll.Name = "NameTagAll"
 Instance.new("UICorner", NameTagAll)
 NameTagAll.ZIndex = 2
 
-local function createColorTextBox(name, posX, posY, placeholder)
-	local box = Instance.new("TextBox")
-	box.Parent = Cheat3_Frame
-	box.Position = UDim2.new(posX, 0, posY, 0)
-	box.Size = UDim2.new(0, 100, 0, 10)
-	box.BackgroundColor3 = Color3.new(1, 1, 1)
-	box.TextScaled = true
-	box.Font = Enum.Font.FredokaOne
-	box.PlaceholderText = placeholder
-	box.Text = "255"
-	box.Name = name
-	Instance.new("UICorner", box)
-	box.ZIndex = 2
-	return box
-end
+local FullBright = Instance.new("TextButton")
+FullBright.Parent = Cheat3_Frame
+FullBright.Position = UDim2.new(0.375, 0, 0.74, 0)
+FullBright.Size = UDim2.new(0, 100, 0, 25)
+FullBright.BackgroundColor3 = Color3.new(1, 0, 0)
+FullBright.TextScaled = true
+FullBright.Font = Enum.Font.FredokaOne
+FullBright.Text = "FullBright: Off"
+FullBright.Name = "FullBright"
+Instance.new("UICorner", FullBright)
+FullBright.ZIndex = 2
 
-local NameTagAllR = createColorTextBox("NameTagAllR", 0.675, 0.864, "R")
-local NameTagAllG = createColorTextBox("NameTagAllG", 0.675, 0.904, "G")
-local NameTagAllB = createColorTextBox("NameTagAllB", 0.675, 0.944, "B")
-
-local function getRGB()
-	return tonumber(NameTagAllR.Text) or 255,
-	tonumber(NameTagAllG.Text) or 255,
-	tonumber(NameTagAllB.Text) or 255
-end
-
-local function updateNametags()
-	local r, g, b = getRGB()
-	for _, plr in ipairs(game.Players:GetPlayers()) do
-		if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
-			local head = plr.Character.Head
-			local nametag = head:FindFirstChild("Nametag")
-			if nametag then
-				local textLabel = nametag:FindFirstChildWhichIsA("TextLabel")
-				if textLabel and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-					and plr.Character:FindFirstChild("HumanoidRootPart") then
-					local distance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-					local scaleFactor = math.clamp((distance - 30) / 300 + 1, 1, 1.2)
-					textLabel.Text = plr.Name .. " [" .. math.floor(distance) .. " Studs Away]"
-					textLabel.TextSize = 14 * scaleFactor
-					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
-				end
-			end
-		end
-	end
-end
-
-NameTagAllR.FocusLost:Connect(updateNametags)
-NameTagAllG.FocusLost:Connect(updateNametags)
-NameTagAllB.FocusLost:Connect(updateNametags)
-
-NameTagAll.MouseButton1Click:Connect(function()
-	nameTagAllEnabled = not nameTagAllEnabled
-	NameTagAll.Text = nameTagAllEnabled and "NameTag All: On" or "NameTag All: Off"
-	NameTagAll.BackgroundColor3 = nameTagAllEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-	local r, g, b = getRGB()
-	if nameTagAllEnabled then
-		for _, plr in ipairs(game.Players:GetPlayers()) do
-			if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
-				local head = plr.Character.Head
-				local nametag = head:FindFirstChild("Nametag")
-				if not nametag then
-					local billboard = Instance.new("BillboardGui")
-					billboard.Name = "Nametag"
-					billboard.Adornee = head
-					billboard.Parent = head
-					billboard.Size = UDim2.new(0, 200, 0, 50)
-					billboard.AlwaysOnTop = true
-					billboard.StudsOffset = Vector3.new(0, 3, 0)
-					local textLabel = Instance.new("TextLabel", billboard)
-					textLabel.Size = UDim2.new(1, 0, 1, 0)
-					textLabel.BackgroundTransparency = 1
-					textLabel.TextColor3 = Color3.fromRGB(r, g, b)
-					textLabel.Font = Enum.Font.FredokaOne
-					textLabel.TextScaled = false
-					textLabel.TextSize = 14
-				end
-			end
-		end
-		nameTagUpdateConnection = RunService.RenderStepped:Connect(updateNametags)
+FullBright.MouseButton1Click:Connect(function()
+	if FullBright.Text == "FullBright: Off" then
+		FullBright.Text = "FullBright: On"
+		FullBright.BackgroundColor3 = Color3.new(0, 1, 0)
+		-- Set full bright lighting
+		Lighting.Ambient = Color3.new(1,1,1)
+		Lighting.Brightness = 2
+		Lighting.ClockTime = 12
 	else
-		if nameTagUpdateConnection then
-			nameTagUpdateConnection:Disconnect()
-			nameTagUpdateConnection = nil
-		end
-		for _, plr in ipairs(game.Players:GetPlayers()) do
-			if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
-				local head = plr.Character.Head
-				local nametag = head:FindFirstChild("Nametag")
-				if nametag then
-					nametag.Enabled = false
-				end
-			end
-		end
+		FullBright.Text = "FullBright: Off"
+		FullBright.BackgroundColor3 = Color3.new(1, 0, 0)
+		-- Restore default lighting (adjust as needed)
+		Lighting.Ambient = Color3.new(0,0,0)
+		Lighting.Brightness = 1
+		Lighting.ClockTime = 14
 	end
 end)
 
 ---------------------------
--- FLY SPEED TEXTBOX & MOBILE FLY BUTTONS (Original layout)
+-- SEARCH PLAYER / TELEPORT TO PLAYER
+---------------------------
+local SearchPlayer = Instance.new("ScrollingFrame")
+SearchPlayer.Parent = Cheat1_Frame
+SearchPlayer.Position = UDim2.new(0.087, 0, 0.16, 0)
+SearchPlayer.Size = UDim2.new(0, 100, 0, 85)
+SearchPlayer.BackgroundColor3 = Color3.new(1, 0, 0)
+SearchPlayer.Name = "SearchPlayer"
+SearchPlayer.ZIndex = 2
+
+-- Create a UIListLayout to automatically arrange the buttons vertically
+local listLayout = Instance.new("UIListLayout", SearchPlayer)
+listLayout.FillDirection = Enum.FillDirection.Vertical
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 5)
+
+for i, plr in ipairs(game.Players:GetPlayers()) do
+	if plr ~= player then
+		local tpButton = Instance.new("TextButton")
+		tpButton.Parent = SearchPlayer
+		tpButton.Size = UDim2.new(0, 85, 0, 15)
+		tpButton.LayoutOrder = i  -- ensures the buttons follow the order
+		tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
+		tpButton.TextScaled = true
+		tpButton.Font = Enum.Font.FredokaOne
+		tpButton.Text = plr.Name
+		tpButton.ZIndex = 2
+		tpButton.MouseButton1Click:Connect(function()
+			if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+			end
+		end)
+		Instance.new("UICorner", tpButton)
+	end
+end
+
+---------------------------
+-- FPS LABEL
+---------------------------
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.Parent = MainGui
+FPSLabel.Position = UDim2.new(0.103, 0, 0.057, 0)
+FPSLabel.Size = UDim2.new(0, 100, 0, 25)
+FPSLabel.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+FPSLabel.TextScaled = true
+FPSLabel.Font = Enum.Font.FredokaOne
+FPSLabel.Text = "FPS: Calculating..."
+FPSLabel.Name = "FPSLabel"
+Instance.new("UICorner", FPSLabel)
+FPSLabel.ZIndex = 2
+
+local lastUpdate = tick()
+local frameCount = 0
+RunService.RenderStepped:Connect(function()
+	frameCount = frameCount + 1
+	local now = tick()
+	if now - lastUpdate >= 1 then
+		FPSLabel.Text = "FPS: " .. math.floor(frameCount / (now - lastUpdate))
+		frameCount = 0
+		lastUpdate = now
+	end
+end)
+
+---------------------------
+-- POSITION LABEL
+---------------------------
+local PositionLabel = Instance.new("TextLabel")
+PositionLabel.Parent = MainGui
+PositionLabel.Position = UDim2.new(0.214, 0, 0.057, 0)
+PositionLabel.Size = UDim2.new(0, 100, 0, 25)
+PositionLabel.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+PositionLabel.TextScaled = true
+PositionLabel.Font = Enum.Font.FredokaOne
+PositionLabel.Name = "PositionLabel"
+Instance.new("UICorner", PositionLabel)
+PositionLabel.ZIndex = 2
+
+RunService.RenderStepped:Connect(function()
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		PositionLabel.Text = string.format("X: %.2f Y: %.2f Z: %.2f", hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+	end
+end)
+
+---------------------------
+-- FLY SPEED TEXTBOX & MOBILE FLY BUTTONS
 ---------------------------
 local FlySpeedBox = Instance.new("TextBox")
 FlySpeedBox.Name = "FlySpeedBox"
@@ -951,6 +964,56 @@ InstantRegen.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- UPDATE CHEAT PAGE DISPLAY (Original layout)
+-- UPDATE CHEAT PAGE DISPLAY
 ---------------------------
 updateCheatPages()
+
+---------------------------
+-- FPS LABEL
+---------------------------
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.Parent = MainGui
+FPSLabel.Position = UDim2.new(0.103, 0, 0.057, 0)
+FPSLabel.Size = UDim2.new(0, 100, 0, 25)
+FPSLabel.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+FPSLabel.TextScaled = true
+FPSLabel.Font = Enum.Font.FredokaOne
+FPSLabel.Text = "FPS: Calculating..."
+FPSLabel.Name = "FPSLabel"
+Instance.new("UICorner", FPSLabel)
+FPSLabel.ZIndex = 2
+
+local lastUpdate = tick()
+local frameCount = 0
+RunService.RenderStepped:Connect(function()
+	frameCount = frameCount + 1
+	local now = tick()
+	if now - lastUpdate >= 1 then
+		FPSLabel.Text = "FPS: " .. math.floor(frameCount / (now - lastUpdate))
+		frameCount = 0
+		lastUpdate = now
+	end
+end)
+
+---------------------------
+-- POSITION LABEL
+---------------------------
+local PositionLabel = Instance.new("TextLabel")
+PositionLabel.Parent = MainGui
+PositionLabel.Position = UDim2.new(0.214, 0, 0.057, 0)
+PositionLabel.Size = UDim2.new(0, 100, 0, 25)
+PositionLabel.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+PositionLabel.TextScaled = true
+PositionLabel.Font = Enum.Font.FredokaOne
+PositionLabel.Name = "PositionLabel"
+Instance.new("UICorner", PositionLabel)
+PositionLabel.ZIndex = 2
+
+RunService.RenderStepped:Connect(function()
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		PositionLabel.Text = string.format("X: %.2f Y: %.2f Z: %.2f", hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+	end
+end)
+
+print("Universal GUI Loaded Successfully")
