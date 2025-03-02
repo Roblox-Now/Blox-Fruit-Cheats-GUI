@@ -658,14 +658,15 @@ SearchPlayer.Size = UDim2.new(0, 100, 0, 85)
 SearchPlayer.BackgroundColor3 = Color3.new(1, 0, 0)
 SearchPlayer.Name = "SearchPlayer"
 SearchPlayer.ZIndex = 2
+SearchPlayer.CanvasSize = UDim2.new(0, 0, 0, 0)  -- optional: adjust if needed
 
--- Use a UIListLayout to automatically arrange the buttons vertically.
+-- Automatically arrange buttons vertically.
 local listLayout = Instance.new("UIListLayout", SearchPlayer)
 listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 5)
 
--- Optional: a refresh button to manually update the list
+-- Create a refresh button that always stays at the top.
 local refreshButton = Instance.new("TextButton")
 refreshButton.Parent = SearchPlayer
 refreshButton.Size = UDim2.new(1, 0, 0, 20)
@@ -675,19 +676,16 @@ refreshButton.Font = Enum.Font.FredokaOne
 refreshButton.TextScaled = true
 refreshButton.LayoutOrder = 0
 Instance.new("UICorner", refreshButton)
-refreshButton.MouseButton1Click:Connect(function()
-	updatePlayerList()
-end)
 
 local function updatePlayerList()
-	-- Clear old player buttons (but keep the refresh button)
+	-- Clear old player buttons (except the refresh button)
 	for _, child in ipairs(SearchPlayer:GetChildren()) do
 		if child:IsA("TextButton") and child ~= refreshButton then
 			child:Destroy()
 		end
 	end
 
-	-- Get and sort players alphabetically
+	-- Get all players, sort them alphabetically
 	local players = game.Players:GetPlayers()
 	table.sort(players, function(a, b)
 		return a.Name < b.Name
@@ -696,13 +694,14 @@ local function updatePlayerList()
 	-- Create a button for each player (except the local player)
 	for i, plr in ipairs(players) do
 		if plr ~= player then
-			-- Capture the current player in a local variable
+			-- Use a local variable to capture the current player
 			local targetPlayer = plr
 			local tpButton = Instance.new("TextButton")
 			tpButton.Parent = SearchPlayer
-			tpButton.Size = UDim2.new(0, 85, 0, 15)
-			-- Start LayoutOrder at 1 so the refresh button stays on top
-			tpButton.LayoutOrder = i + 1
+			-- Use full width of the scrolling frame
+			tpButton.Size = UDim2.new(1, 0, 0, 15)
+			-- LayoutOrder starts at 1, so refresh remains on top at 0.
+			tpButton.LayoutOrder = i  
 			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
 			tpButton.TextScaled = true
 			tpButton.Font = Enum.Font.FredokaOne
@@ -721,10 +720,12 @@ local function updatePlayerList()
 	end
 end
 
--- Initial update of the list
+refreshButton.MouseButton1Click:Connect(updatePlayerList)
+
+-- Initial update
 updatePlayerList()
 
--- Update the list automatically when players join or leave
+-- Update the list automatically when players join or leave.
 game.Players.PlayerAdded:Connect(function(newPlayer)
 	updatePlayerList()
 end)
