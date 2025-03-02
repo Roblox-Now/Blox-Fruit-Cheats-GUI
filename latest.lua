@@ -665,10 +665,25 @@ listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 5)
 
+-- Add a refresh button at the top of the list.
+local refreshButton = Instance.new("TextButton")
+refreshButton.Parent = SearchPlayer
+refreshButton.Size = UDim2.new(1, 0, 0, 20)
+refreshButton.Text = "Refresh"
+refreshButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+refreshButton.Font = Enum.Font.FredokaOne
+refreshButton.TextScaled = true
+refreshButton.LayoutOrder = 0
+Instance.new("UICorner", refreshButton)
+
+refreshButton.MouseButton1Click:Connect(function()
+	updatePlayerList()
+end)
+
 local function updatePlayerList()
-	-- Clear old buttons
+	-- Clear old player buttons (but keep the refresh button)
 	for _, child in ipairs(SearchPlayer:GetChildren()) do
-		if child:IsA("TextButton") then
+		if child:IsA("TextButton") and child ~= refreshButton then
 			child:Destroy()
 		end
 	end
@@ -684,14 +699,16 @@ local function updatePlayerList()
 		if plr ~= player then
 			local tpButton = Instance.new("TextButton")
 			tpButton.Parent = SearchPlayer
+			-- LayoutOrder starts at 1 so refresh remains on top
 			tpButton.Size = UDim2.new(0, 85, 0, 15)
-			tpButton.LayoutOrder = i  -- ensures buttons are in sorted order
+			tpButton.LayoutOrder = i
 			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
 			tpButton.TextScaled = true
 			tpButton.Font = Enum.Font.FredokaOne
 			tpButton.Text = plr.Name
 			tpButton.ZIndex = 2
 			tpButton.MouseButton1Click:Connect(function()
+				-- When clicked, attempt to teleport to that player's character
 				if player.Character 
 					and player.Character:FindFirstChild("HumanoidRootPart") 
 					and plr.Character 
@@ -703,6 +720,19 @@ local function updatePlayerList()
 		end
 	end
 end
+
+-- Initial update
+updatePlayerList()
+
+-- Update the list automatically when players join or leave.
+game.Players.PlayerAdded:Connect(function(newPlayer)
+	updatePlayerList()
+end)
+
+game.Players.PlayerRemoving:Connect(function(leavingPlayer)
+	updatePlayerList()
+end)
+
 
 -- Initial update
 updatePlayerList()
