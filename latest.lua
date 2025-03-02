@@ -544,6 +544,66 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 	end
 end)
 
+local nameTagAllEnabled = false
+
+local NameTagAll = Instance.new("TextButton")
+NameTagAll.Parent = Cheat3_Frame
+NameTagAll.Position = UDim2.new(0.675, 0, 0.74, 0)
+NameTagAll.Size = UDim2.new(0, 100, 0, 25)
+NameTagAll.BackgroundColor3 = Color3.new(1, 0, 0)
+NameTagAll.TextScaled = true
+NameTagAll.Font = Enum.Font.FredokaOne
+NameTagAll.Text = "NameTag All: Off"
+NameTagAll.Name = "NameTagAll"
+Instance.new("UICorner", NameTagAll)
+NameTagAll.ZIndex = 2
+
+NameTagAll.MouseButton1Click:Connect(function()
+	nameTagAllEnabled = not nameTagAllEnabled
+	if nameTagAllEnabled then
+		NameTagAll.Text = "NameTag All: On"
+		NameTagAll.BackgroundColor3 = Color3.new(0, 1, 0)
+	else
+		NameTagAll.Text = "NameTag All: Off"
+		NameTagAll.BackgroundColor3 = Color3.new(1, 0, 0)
+	end
+
+	for _, plr in ipairs(game.Players:GetPlayers()) do
+		-- Do not create or toggle a nametag for the local player.
+		if plr ~= player then
+			if plr.Character and plr.Character:FindFirstChild("Head") then
+				local head = plr.Character.Head
+				local nametag = head:FindFirstChild("Nametag")
+				if nametag then
+					nametag.Enabled = nameTagAllEnabled
+				else
+					-- Only create a nametag if we're toggling on.
+					if nameTagAllEnabled then
+						local billboard = Instance.new("BillboardGui")
+						billboard.Name = "Nametag"
+						billboard.Adornee = head
+						billboard.Parent = head
+						billboard.Size = UDim2.new(0, 200, 0, 50)
+						billboard.AlwaysOnTop = true
+
+						local textLabel = Instance.new("TextLabel", billboard)
+						textLabel.Size = UDim2.new(1, 0, 1, 0)
+						textLabel.BackgroundTransparency = 1
+
+						-- Calculate the distance from the local player if possible.
+						local distance = 0
+						if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and 
+							plr.Character:FindFirstChild("HumanoidRootPart") then
+							distance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+						end
+						textLabel.Text = plr.Name .. " [" .. math.floor(distance) .. " Studs Away]"
+					end
+				end
+			end
+		end
+	end
+end)
+
 local ExecuteTransButton = Instance.new("TextButton")
 ExecuteTransButton.Parent = Cheat3_Frame
 ExecuteTransButton.Text = "Execute"
