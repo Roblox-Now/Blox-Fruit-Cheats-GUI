@@ -665,7 +665,7 @@ listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 5)
 
--- Add a refresh button at the top of the list.
+-- Optional: a refresh button to manually update the list
 local refreshButton = Instance.new("TextButton")
 refreshButton.Parent = SearchPlayer
 refreshButton.Size = UDim2.new(1, 0, 0, 20)
@@ -675,7 +675,6 @@ refreshButton.Font = Enum.Font.FredokaOne
 refreshButton.TextScaled = true
 refreshButton.LayoutOrder = 0
 Instance.new("UICorner", refreshButton)
-
 refreshButton.MouseButton1Click:Connect(function()
 	updatePlayerList()
 end)
@@ -697,23 +696,24 @@ local function updatePlayerList()
 	-- Create a button for each player (except the local player)
 	for i, plr in ipairs(players) do
 		if plr ~= player then
+			-- Capture the current player in a local variable
+			local targetPlayer = plr
 			local tpButton = Instance.new("TextButton")
 			tpButton.Parent = SearchPlayer
-			-- LayoutOrder starts at 1 so refresh remains on top
 			tpButton.Size = UDim2.new(0, 85, 0, 15)
-			tpButton.LayoutOrder = i
+			-- Start LayoutOrder at 1 so the refresh button stays on top
+			tpButton.LayoutOrder = i + 1
 			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
 			tpButton.TextScaled = true
 			tpButton.Font = Enum.Font.FredokaOne
-			tpButton.Text = plr.Name
+			tpButton.Text = targetPlayer.Name
 			tpButton.ZIndex = 2
 			tpButton.MouseButton1Click:Connect(function()
-				-- When clicked, attempt to teleport to that player's character
 				if player.Character 
 					and player.Character:FindFirstChild("HumanoidRootPart") 
-					and plr.Character 
-					and plr.Character:FindFirstChild("HumanoidRootPart") then
-					player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+					and targetPlayer.Character 
+					and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+					player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
 				end
 			end)
 			Instance.new("UICorner", tpButton)
@@ -721,36 +721,10 @@ local function updatePlayerList()
 	end
 end
 
--- Initial update
+-- Initial update of the list
 updatePlayerList()
 
--- Update the list automatically when players join or leave.
-game.Players.PlayerAdded:Connect(function(newPlayer)
-	updatePlayerList()
-end)
-
-game.Players.PlayerRemoving:Connect(function(leavingPlayer)
-	updatePlayerList()
-end)
-
-
--- Initial update
-updatePlayerList()
-
--- Update the list when players join or leave
-game.Players.PlayerAdded:Connect(function(newPlayer)
-	updatePlayerList()
-end)
-
-game.Players.PlayerRemoving:Connect(function(leavingPlayer)
-	updatePlayerList()
-end)
-
-
--- Initial update
-updatePlayerList()
-
--- Update the list when players join or leave
+-- Update the list automatically when players join or leave
 game.Players.PlayerAdded:Connect(function(newPlayer)
 	updatePlayerList()
 end)
