@@ -13,32 +13,27 @@
 
 --[[ 
    FULL CHEAT GUI SCRIPT WITH SMOOTH HD ADMIN–STYLE FLY HANDLING  
-   - DevMode bypasses PlaceId check and uses Universal GUI texts.
+   - DevMode bypasses any place-specific checks and uses Universal GUI texts.
    - Cheat pages:
        Page 1: Teleport (TP)
        Page 2: Movement (WalkSpeed, JumpPower, Low Gravity)
        Page 3: OP (Fly, Noclip, Map Transparency, Highlight Players)
-   - The Fly toggle uses HD Admin fly handling with smooth rotation.
-   - On mobile, default horizontal input is used plus on-screen Up/Down buttons (outside the main menu) for vertical movement.
+   - The Fly toggle uses an HD Admin–style fly handler with smooth rotation.
+   - On mobile, on-screen Up/Down buttons (outside the main menu) supply vertical input.
    - Disconnect and Rejoin buttons are placed in the main menu.
+   - A continuous collision update loop forces CanCollide = not noclipEnabled, so that when Fly+Noclip are both on, you can pass through ground/walls.
 --]]
+
 
 ---------------------------
 -- SETTINGS & VARIABLES
 ---------------------------
 local DevMode = true
 local Menu_Version = "V1.0.3 BETA"
-local Menu_Name = "BloxFruitsCheatsGUI"
-if DevMode then Menu_Name = "Universal GUI" end
-
-local titleText = "Blox Fruits Cheats"
-local openButtonText = "Open Blox Fruit Cheats"
-local closeButtonText = "Close Blox Fruit Cheats"
-if DevMode then
-	titleText = "Universal GUI"
-	openButtonText = "Open Universal GUI"
-	closeButtonText = "Close Universal GUI"
-end
+local Menu_Name = "Universal GUI"
+local titleText = "Universal GUI"
+local openButtonText = "Open Universal GUI"
+local closeButtonText = "Close Universal GUI"
 
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
@@ -46,42 +41,31 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
 
-local flyEnabled = false      -- Toggle for fly mode
-local noclipEnabled = false   -- Toggle for noclip
+local flyEnabled = false
+local noclipEnabled = false
 local flySpeed = 50
+local oldGravity = nil  -- for mobile
 
-local oldGravity = nil        -- For mobile, to restore gravity
-
--- Mobile vertical control flags
+-- Mobile vertical input flags
 local mobileUp = false
 local mobileDown = false
 
-local validPlaceId = {2753915549, 4442272183, 7449423635}
-local currentPlaceId = game.PlaceId
 local Page = 1
 
-local function isValidPlaceId(id)
-	for _, v in ipairs(validPlaceId) do
-		if v == id then return true end
+---------------------------
+-- COLLISION UPDATE (Noclip)
+---------------------------
+RunService.RenderStepped:Connect(function()
+	local character = player.Character
+	if character then
+		for _, part in pairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				-- Always force CanCollide = false if noclipEnabled is true.
+				part.CanCollide = not noclipEnabled
+			end
+		end
 	end
-	return false
-end
-
-if not DevMode and not isValidPlaceId(currentPlaceId) then
-	local GameInvalid = Instance.new("TextLabel")
-	GameInvalid.Parent = player.PlayerGui
-	GameInvalid.Text = "Invalid Game! Try Again Later!"
-	GameInvalid.TextColor3 = Color3.new(1, 0, 0)
-	GameInvalid.TextScaled = true
-	GameInvalid.Font = Enum.Font.FredokaOne
-	GameInvalid.Size = UDim2.new(0, 325, 0, 35)
-	GameInvalid.Position = UDim2.new(0.371, 0, 0.93, 0)
-	GameInvalid.BackgroundTransparency = 1
-	GameInvalid.Name = "GameInvalid"
-	Instance.new("UICorner", GameInvalid)
-	GameInvalid.Visible = true
-	return
-end
+end)
 
 ---------------------------
 -- MAIN GUI SETUP
@@ -89,19 +73,6 @@ end
 local MainGui = Instance.new("ScreenGui")
 MainGui.Parent = player.PlayerGui
 MainGui.Name = Menu_Name
-
-local GameInvalid = Instance.new("TextLabel")
-GameInvalid.Parent = MainGui
-GameInvalid.Text = "Invalid Game! Try Again Later!"
-GameInvalid.TextColor3 = Color3.new(1, 0, 0)
-GameInvalid.TextScaled = true
-GameInvalid.Font = Enum.Font.FredokaOne
-GameInvalid.Size = UDim2.new(0, 325, 0, 35)
-GameInvalid.Position = UDim2.new(0.371, 0, 0.93, 0)
-GameInvalid.BackgroundTransparency = 1
-GameInvalid.Name = "GameInvalid"
-Instance.new("UICorner", GameInvalid)
-GameInvalid.Visible = false
 
 local OpenButton = Instance.new("TextButton")
 OpenButton.Name = "OpenButton"
@@ -134,7 +105,7 @@ OpenButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Re-add Disconnect and Rejoin buttons to MainFrame (original locations)
+-- Disconnect & Rejoin Buttons (inside MainFrame)
 local DisconnectButton = Instance.new("TextButton")
 DisconnectButton.Name = "DisconnectButton"
 DisconnectButton.Text = "Disconnect"
@@ -145,9 +116,7 @@ DisconnectButton.Font = Enum.Font.FredokaOne
 DisconnectButton.TextScaled = true
 DisconnectButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
 Instance.new("UICorner", DisconnectButton)
-DisconnectButton.MouseButton1Click:Connect(function()
-	player:Kick("Disconnect.")
-end)
+DisconnectButton.MouseButton1Click:Connect(function() player:Kick("Disconnect.") end)
 
 local RejoinButton = Instance.new("TextButton")
 RejoinButton.Name = "RejoinButton"
@@ -159,9 +128,7 @@ RejoinButton.Font = Enum.Font.FredokaOne
 RejoinButton.TextScaled = true
 RejoinButton.BackgroundColor3 = Color3.new(1, 0.607843, 0)
 Instance.new("UICorner", RejoinButton)
-RejoinButton.MouseButton1Click:Connect(function()
-	TeleportService:Teleport(game.PlaceId, player)
-end)
+RejoinButton.MouseButton1Click:Connect(function() TeleportService:Teleport(game.PlaceId, player) end)
 
 local Credits = Instance.new("TextLabel")
 Credits.Name = "Credits"
@@ -197,7 +164,7 @@ Version_Text.Size = UDim2.new(0, 100, 0, 15)
 Instance.new("UICorner", Version_Text)
 
 ---------------------------
--- SIDEBAR & BUTTONS ZONE
+-- SIDEBAR & CHEAT AREA SETUP
 ---------------------------
 local SideBarFrame = Instance.new("Frame")
 SideBarFrame.Parent = MainFrame
@@ -210,7 +177,8 @@ Instance.new("UICorner", SideBarFrame)
 local ButtonsZoneFrame = Instance.new("Frame")
 ButtonsZoneFrame.Parent = MainFrame
 ButtonsZoneFrame.Name = "ButtonsZoneFrame"
-ButtonsZoneFrame.Transparency = 1
+ButtonsZoneFrame.BackgroundTransparency = 0
+ButtonsZoneFrame.BackgroundColor3 = Color3.new(0, 0, 0)
 ButtonsZoneFrame.Position = UDim2.new(0.2, 0, 0, 0)
 ButtonsZoneFrame.Size = UDim2.new(0, 400, 0, 250)
 
@@ -222,13 +190,14 @@ ButtonsScrollingFrame.Position = UDim2.new(0, 0, 0, 0)
 ButtonsScrollingFrame.Size = UDim2.new(0, 100, 0, 250)
 
 ---------------------------
--- CHEAT FRAMES (Single Instances)
+-- CHEAT FRAMES (One Instance Each)
 ---------------------------
 local Cheat1_Frame = Instance.new("Frame")
 Cheat1_Frame.Visible = true
 Cheat1_Frame.Name = "Cheat1"
 Cheat1_Frame.Parent = ButtonsZoneFrame
-Cheat1_Frame.BackgroundTransparency = 1
+Cheat1_Frame.BackgroundTransparency = 0
+Cheat1_Frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
 Cheat1_Frame.Position = UDim2.new(0, 0, 0, 0)
 Cheat1_Frame.Size = UDim2.new(0, 400, 0, 250)
 Instance.new("UICorner", Cheat1_Frame)
@@ -237,7 +206,8 @@ local Cheat2_Frame = Instance.new("Frame")
 Cheat2_Frame.Visible = false
 Cheat2_Frame.Name = "Cheat2"
 Cheat2_Frame.Parent = ButtonsZoneFrame
-Cheat2_Frame.BackgroundTransparency = 1
+Cheat2_Frame.BackgroundTransparency = 0
+Cheat2_Frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
 Cheat2_Frame.Position = UDim2.new(0, 0, 0, 0)
 Cheat2_Frame.Size = UDim2.new(0, 400, 0, 250)
 Instance.new("UICorner", Cheat2_Frame)
@@ -246,7 +216,8 @@ local Cheat3_Frame = Instance.new("Frame")
 Cheat3_Frame.Visible = false
 Cheat3_Frame.Name = "Cheat3"
 Cheat3_Frame.Parent = ButtonsZoneFrame
-Cheat3_Frame.BackgroundTransparency = 1
+Cheat3_Frame.BackgroundTransparency = 0
+Cheat3_Frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
 Cheat3_Frame.Position = UDim2.new(0, 0, 0, 0)
 Cheat3_Frame.Size = UDim2.new(0, 400, 0, 250)
 Instance.new("UICorner", Cheat3_Frame)
@@ -276,7 +247,7 @@ Cheat1_Button.Parent = ButtonsScrollingFrame
 Cheat1_Button.Text = "TP"
 Cheat1_Button.Font = Enum.Font.FredokaOne
 Cheat1_Button.TextScaled = true
-	Cheat1_Button.BackgroundColor3 = Color3.new(1, 0.607, 0)
+Cheat1_Button.BackgroundColor3 = Color3.new(1, 0.607, 0)
 Cheat1_Button.Position = UDim2.new(0.05, 0, 0.02, 0)
 Cheat1_Button.Size = UDim2.new(0, 90, 0, 25)
 Instance.new("UICorner", Cheat1_Button)
@@ -288,7 +259,7 @@ Cheat2_Button.Parent = ButtonsScrollingFrame
 Cheat2_Button.Text = "Movement"
 Cheat2_Button.Font = Enum.Font.FredokaOne
 Cheat2_Button.TextScaled = true
-	Cheat2_Button.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+Cheat2_Button.BackgroundColor3 = Color3.new(1, 0.607843, 0)
 Cheat2_Button.Position = UDim2.new(0.05, 0, 0.10, 0)
 Cheat2_Button.Size = UDim2.new(0, 90, 0, 25)
 Instance.new("UICorner", Cheat2_Button)
@@ -300,109 +271,11 @@ Cheat3_Button.Parent = ButtonsScrollingFrame
 Cheat3_Button.Text = "OP"
 Cheat3_Button.Font = Enum.Font.FredokaOne
 Cheat3_Button.TextScaled = true
-	Cheat3_Button.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+Cheat3_Button.BackgroundColor3 = Color3.new(1, 0.607843, 0)
 Cheat3_Button.Position = UDim2.new(0.05, 0, 0.18, 0)
 Cheat3_Button.Size = UDim2.new(0, 90, 0, 25)
 Instance.new("UICorner", Cheat3_Button)
 Cheat3_Button.MouseButton1Click:Connect(function() Page = 3 updateCheatPages() end)
-
----------------------------
--- COLLISION UPDATE (Noclip)
----------------------------
-RunService.RenderStepped:Connect(function()
-	local character = player.Character
-	if character then
-		for _, part in pairs(character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = not noclipEnabled
-			end
-		end
-	end
-end)
-
----------------------------
--- FLY HANDLING (Smooth Rotation)
----------------------------
-local bv, bg  -- BodyVelocity and BodyGyro
-local hdFlying = false
-
-local function startFly_HD()
-	local character = player.Character
-	if not character then return end
-	local hrp = character:FindFirstChild("HumanoidRootPart")
-	local hum = character:FindFirstChildOfClass("Humanoid")
-	if not hrp or not hum then return end
-
-	-- Enable fly mode with smooth rotation.
-	hum.PlatformStand = true
-
-	if UIS.TouchEnabled then
-		oldGravity = workspace.Gravity
-		workspace.Gravity = 0
-		UpButton.Visible = true
-		DownButton.Visible = true
-	end
-
-	bv = Instance.new("BodyVelocity", hrp)
-	bv.Velocity = Vector3.new(0, 0, 0)
-	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-
-	bg = Instance.new("BodyGyro", hrp)
-	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-	bg.CFrame = CFrame.new(hrp.Position, hrp.Position + workspace.CurrentCamera.CFrame.LookVector)
-
-	hdFlying = true
-	local flyConn = RunService.RenderStepped:Connect(function()
-		if not hdFlying then
-			if flyConn then flyConn:Disconnect() end
-			return
-		end
-
-		local cam = workspace.CurrentCamera
-		local moveDir = Vector3.new(0, 0, 0)
-		if UIS.TouchEnabled then
-			local horizontal = hum.MoveDirection
-			local vertical = 0
-			if mobileUp then vertical = vertical + 1 end
-			if mobileDown then vertical = vertical - 1 end
-			moveDir = Vector3.new(horizontal.X, vertical, horizontal.Z)
-		else
-			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-		end
-
-		if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
-
-		bv.Velocity = moveDir * flySpeed
-		local targetCFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
-		bg.CFrame = bg.CFrame:Lerp(targetCFrame, 0.1)
-	end)
-end
-
-local function stopFly_HD()
-	hdFlying = false
-	local character = player.Character
-	if character then
-		local hum = character:FindFirstChildOfClass("Humanoid")
-		if hum then hum.PlatformStand = false end
-	end
-	if bv then
-		bv:Destroy() bv = nil
-	end
-	if bg then
-		bg:Destroy() bg = nil
-	end
-	if UIS.TouchEnabled and oldGravity then
-		workspace.Gravity = oldGravity
-		oldGravity = nil
-		UpButton.Visible = false
-		DownButton.Visible = false
-	end
-end
 
 ---------------------------
 -- CHEAT PAGE 1: TELEPORT
@@ -455,7 +328,9 @@ ExecuteButton.TextScaled = true
 Instance.new("UICorner", ExecuteButton)
 ExecuteButton.MouseButton1Click:Connect(function()
 	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if hrp then hrp.CFrame = CFrame.new(tonumber(XPos.Text), tonumber(YPos.Text), tonumber(ZPos.Text)) end
+	if hrp then
+		hrp.CFrame = CFrame.new(tonumber(XPos.Text), tonumber(YPos.Text), tonumber(ZPos.Text))
+	end
 end)
 
 ---------------------------
@@ -514,38 +389,38 @@ ExecuteButton1.Parent = Cheat2_Frame
 ExecuteButton1.Position = UDim2.new(0.087, 0, 0.58, 0)
 ExecuteButton1.Size = UDim2.new(0, 100, 0, 25)
 ExecuteButton1.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-	ExecuteButton1.TextScaled = true
-	ExecuteButton1.Font = Enum.Font.FredokaOne
-	ExecuteButton1.Text = "Execute"
-	ExecuteButton1.Name = "ExecuteButton1"
-	Instance.new("UICorner", ExecuteButton1)
-	ExecuteButton1.MouseButton1Click:Connect(function()
-		local wsVal = tonumber(WS.Text) or 16
-		local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-		if humanoid then
-			local success, err = pcall(function() humanoid.WalkSpeed = wsVal end)
-			if not success then warn("Failed to change WalkSpeed: " .. tostring(err)) end
-		end
-	end)
+ExecuteButton1.TextScaled = true
+ExecuteButton1.Font = Enum.Font.FredokaOne
+ExecuteButton1.Text = "Execute"
+ExecuteButton1.Name = "ExecuteButton1"
+Instance.new("UICorner", ExecuteButton1)
+ExecuteButton1.MouseButton1Click:Connect(function()
+	local wsVal = tonumber(WS.Text) or 16
+	local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+	if humanoid then
+		local success, err = pcall(function() humanoid.WalkSpeed = wsVal end)
+		if not success then warn("Failed to change WalkSpeed: " .. tostring(err)) end
+	end
+end)
 
 local ExecuteButton2 = Instance.new("TextButton")
 ExecuteButton2.Parent = Cheat2_Frame
 ExecuteButton2.Position = UDim2.new(0.375, 0, 0.58, 0)
 ExecuteButton2.Size = UDim2.new(0, 100, 0, 25)
 ExecuteButton2.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-	ExecuteButton2.TextScaled = true
-	ExecuteButton2.Font = Enum.Font.FredokaOne
-	ExecuteButton2.Text = "Execute"
-	ExecuteButton2.Name = "ExecuteButton2"
-	Instance.new("UICorner", ExecuteButton2)
-	ExecuteButton2.MouseButton1Click:Connect(function()
-		local jpVal = tonumber(JP.Text) or 50
-		local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-		if humanoid then
-			local success, err = pcall(function() humanoid.JumpPower = jpVal end)
-			if not success then warn("Failed to change JumpPower: " .. tostring(err)) end
-		end
-	end)
+ExecuteButton2.TextScaled = true
+ExecuteButton2.Font = Enum.Font.FredokaOne
+ExecuteButton2.Text = "Execute"
+ExecuteButton2.Name = "ExecuteButton2"
+Instance.new("UICorner", ExecuteButton2)
+ExecuteButton2.MouseButton1Click:Connect(function()
+	local jpVal = tonumber(JP.Text) or 50
+	local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+	if humanoid then
+		local success, err = pcall(function() humanoid.JumpPower = jpVal end)
+		if not success then warn("Failed to change JumpPower: " .. tostring(err)) end
+	end
+end)
 
 ---------------------------
 -- CHEAT PAGE 3: OP (Fly, Noclip, Map Transparency, Highlight)
@@ -555,46 +430,43 @@ MT.Parent = Cheat3_Frame
 MT.Position = UDim2.new(0.087, 0, 0.42, 0)
 MT.Size = UDim2.new(0, 100, 0, 25)
 MT.BackgroundColor3 = Color3.new(1, 1, 1)
-	MT.TextScaled = true
-	MT.Font = Enum.Font.FredokaOne
-	MT.Text = "0.5"
+MT.TextScaled = true
+MT.Font = Enum.Font.FredokaOne
+MT.Text = "0.5"
 MT.Name = "MT"
 MT.PlaceholderText = "Map Transparency [NUMBER]"
 Instance.new("UICorner", MT)
-MT.ZIndex = 1
 
 local Fly = Instance.new("TextButton")
 Fly.Parent = Cheat3_Frame
 Fly.Position = UDim2.new(0.375, 0, 0.42, 0)
 Fly.Size = UDim2.new(0, 100, 0, 25)
 Fly.BackgroundColor3 = Color3.new(1, 0, 0)
-	Fly.TextScaled = true
+Fly.TextScaled = true
 Fly.Font = Enum.Font.FredokaOne
-	Fly.Text = "Fly: Off"
+Fly.Text = "Fly: Off"
 Fly.Name = "Fly"
 Instance.new("UICorner", Fly)
-Fly.ZIndex = 2
 
 local Noclip = Instance.new("TextButton")
 Noclip.Parent = Cheat3_Frame
 Noclip.Position = UDim2.new(0.675, 0, 0.42, 0)
 Noclip.Size = UDim2.new(0, 100, 0, 25)
 Noclip.BackgroundColor3 = Color3.new(1, 0, 0)
-	Noclip.TextScaled = true
+Noclip.TextScaled = true
 Noclip.Font = Enum.Font.FredokaOne
-	Noclip.Text = "Noclip: Off"
+Noclip.Text = "Noclip: Off"
 Noclip.Name = "Noclip"
 Instance.new("UICorner", Noclip)
-Noclip.ZIndex = 2
 
 local HighlightAll = Instance.new("TextButton")
 HighlightAll.Parent = Cheat3_Frame
 HighlightAll.Position = UDim2.new(0.675, 0, 0.58, 0)
 HighlightAll.Size = UDim2.new(0, 100, 0, 25)
 HighlightAll.BackgroundColor3 = Color3.new(1, 0, 0)
-	HighlightAll.TextScaled = true
+HighlightAll.TextScaled = true
 HighlightAll.Font = Enum.Font.FredokaOne
-	HighlightAll.Text = "Highlight All: Off"
+HighlightAll.Text = "Highlight All: Off"
 HighlightAll.Name = "HighlightAll"
 Instance.new("UICorner", HighlightAll)
 HighlightAll.ZIndex = 2
@@ -604,12 +476,14 @@ HighlightAll.MouseButton1Click:Connect(function()
 	if HighlightAll.Text == "Highlight All: Off" then
 		local function highlightCharacter(character)
 			if character and not character:FindFirstChildOfClass("Highlight") then
-				local highlight = Instance.new("Highlight")
-				highlight.Parent = character
+				local hl = Instance.new("Highlight")
+				hl.Parent = character
 			end
 		end
 		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character then highlightCharacter(plr.Character) end
+			if plr.Character then
+				highlightCharacter(plr.Character)
+			end
 			plr.CharacterAdded:Connect(highlightCharacter)
 		end
 		HighlightAll.Text = "Highlight All: On"
@@ -618,7 +492,9 @@ HighlightAll.MouseButton1Click:Connect(function()
 		for _, plr in pairs(Players:GetPlayers()) do
 			if plr.Character then
 				for _, child in ipairs(plr.Character:GetChildren()) do
-					if child:IsA("Highlight") then child:Destroy() end
+					if child:IsA("Highlight") then
+						child:Destroy()
+					end
 				end
 			end
 		end
@@ -627,7 +503,47 @@ HighlightAll.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Mobile vertical controls: Up/Down buttons placed outside the main menu.
+local ExecuteButton3 = Instance.new("TextButton")
+ExecuteButton3.Parent = Cheat3_Frame
+ExecuteButton3.Position = UDim2.new(0.087, 0, 0.58, 0)
+ExecuteButton3.Size = UDim2.new(0, 100, 0, 25)
+ExecuteButton3.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+ExecuteButton3.TextScaled = true
+ExecuteButton3.Font = Enum.Font.FredokaOne
+ExecuteButton3.Text = "Execute"
+ExecuteButton3.Name = "ExecuteButton3"
+Instance.new("UICorner", ExecuteButton3)
+ExecuteButton3.MouseButton1Click:Connect(function()
+	local transparencyValue = tonumber(MT.Text) or 0.5
+	local ws = game:GetService("Workspace")
+	local Players = game:GetService("Players")
+	local function isPlayerCharacter(object)
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character and object:IsDescendantOf(plr.Character) then
+				return true
+			end
+		end
+		return false
+	end
+	local function applyTransparency()
+		local count = 0
+		for _, obj in pairs(ws:GetDescendants()) do
+			if obj:IsA("BasePart") and not isPlayerCharacter(obj) then
+				obj.Transparency = transparencyValue
+				count = count + 1
+			end
+		end
+		print("Transparency applied to", count, "map parts")
+	end
+	repeat wait() until player:FindFirstChild("PlayerGui")
+	print("Starting transparency change...")
+	applyTransparency()
+	print("Transparency change complete!")
+end)
+
+---------------------------
+-- MOBILE UP/DOWN BUTTONS (Outside MainFrame)
+---------------------------
 local UpButton = Instance.new("TextButton")
 UpButton.Name = "UpButton"
 UpButton.Parent = MainGui
@@ -670,7 +586,6 @@ local function startFly_HD()
 	local hum = character:FindFirstChildOfClass("Humanoid")
 	if not hrp or not hum then return end
 
-	-- Enable fly mode with smooth rotation.
 	hum.PlatformStand = true
 
 	if UIS.TouchEnabled then
@@ -741,7 +656,6 @@ local function stopFly_HD()
 	end
 end
 
--- Fly toggle functionality
 Fly.MouseButton1Click:Connect(function()
 	if not flyEnabled then
 		flyEnabled = true
@@ -828,8 +742,8 @@ HighlightAll.MouseButton1Click:Connect(function()
 	if HighlightAll.Text == "Highlight All: Off" then
 		local function highlightCharacter(character)
 			if character and not character:FindFirstChildOfClass("Highlight") then
-				local highlight = Instance.new("Highlight")
-				highlight.Parent = character
+				local hl = Instance.new("Highlight")
+				hl.Parent = character
 			end
 		end
 		for _, plr in pairs(Players:GetPlayers()) do
@@ -851,37 +765,7 @@ HighlightAll.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Mobile vertical controls: Up/Down buttons placed outside main menu.
-local UpButton = Instance.new("TextButton")
-UpButton.Name = "UpButton"
-UpButton.Parent = MainGui
-UpButton.Text = "Up"
-UpButton.Font = Enum.Font.FredokaOne
-UpButton.TextScaled = true
-UpButton.BackgroundColor3 = Color3.new(0, 1, 0)
-UpButton.Position = UDim2.new(0, 20, 1, -150)
-UpButton.Size = UDim2.new(0, 48, 0, 25)
-Instance.new("UICorner", UpButton)
-UpButton.Visible = false
-
-local DownButton = Instance.new("TextButton")
-DownButton.Name = "DownButton"
-DownButton.Parent = MainGui
-DownButton.Text = "Down"
-DownButton.Font = Enum.Font.FredokaOne
-DownButton.TextScaled = true
-DownButton.BackgroundColor3 = Color3.new(1, 0, 0)
-DownButton.Position = UDim2.new(0, 80, 1, -150)
-DownButton.Size = UDim2.new(0, 48, 0, 25)
-Instance.new("UICorner", DownButton)
-DownButton.Visible = false
-
-UpButton.MouseButton1Down:Connect(function() mobileUp = true end)
-UpButton.MouseButton1Up:Connect(function() mobileUp = false end)
-DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
-DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
-
 ---------------------------
--- INITIALIZE CHEAT PAGE DISPLAY
+-- UPDATE CHEAT PAGE DISPLAY
 ---------------------------
 updateCheatPages()
