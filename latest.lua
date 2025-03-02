@@ -17,12 +17,12 @@
    - Cheat pages:
        Page 1: Teleport (TP)
        Page 2: Movement (WalkSpeed, JumpPower, Low Gravity)
-       Page 3: OP (Fly, Noclip, Map Transparency, Highlight Players)
-   - The Fly toggle uses an HD Admin–style fly handler with smooth rotation.
-   - On mobile, on-screen Up/Down buttons (outside the main menu) provide vertical input.
-   - Disconnect and Rejoin buttons are placed in the main menu.
-   - A continuous collision update loop forces CanCollide = not noclipEnabled so that with Fly+Noclip enabled, you pass through obstacles.
-   - The MainFrame is draggable using a Tween–based drag function.
+       Page 3: OP (Fly, Noclip, Map Transparency, Highlight Players, InstantRegen)
+   - The Fly toggle uses an HD Admin–style fly handler that freezes your body (PlatformStand = true) and smoothly rotates your character to follow the camera.
+   - A continuous collision update loop forces CanCollide = not noclipEnabled (use noclip to avoid kill bricks).
+   - A Tween–based drag function lets you reposition the MainFrame.
+   - A FlySpeedBox textbox (orange background, placeholder "Fly Speed") appears at the top–middle when fly mode is active.
+   - The InstantRegen button uses a Heartbeat connection to set your Humanoid’s Health/MaxHealth to 99999 and creates a ForceField.
 --]]
 
 
@@ -30,7 +30,7 @@
 -- SETTINGS & VARIABLES
 ---------------------------
 local DevMode = true
-local Menu_Version = "V1.0.3 BETA"
+local Menu_Version = "V1.0.5 BETA"
 local Menu_Name = "Universal GUI"
 local titleText = "Universal GUI"
 local openButtonText = "Open Universal GUI"
@@ -47,11 +47,20 @@ local noclipEnabled = false
 local flySpeed = 50
 local oldGravity = nil  -- for mobile
 
--- Mobile vertical input flags
-local mobileUp = false
-local mobileDown = false
-
 local Page = 1
+
+---------------------------
+-- AUTO-RELOAD CHARACTER ON DEATH (Optional God-mode rejoin)
+---------------------------
+player.CharacterAdded:Connect(function(character)
+	local hum = character:WaitForChild("Humanoid")
+	hum.StateChanged:Connect(function(_, newState)
+		if newState == Enum.HumanoidStateType.Dead then
+			wait(0.1)
+			player:LoadCharacter()
+		end
+	end)
+end)
 
 ---------------------------
 -- COLLISION UPDATE (Noclip)
@@ -94,8 +103,7 @@ MainFrame.Size = UDim2.new(0, 500, 0, 250)
 MainFrame.Position = UDim2.new(0.302, 0, 0.296, 0)
 Instance.new("UICorner", MainFrame)
 
--- New Drag Function using TweenService (applied to MainFrame)
-local UIS = game:GetService("UserInputService")
+-- Tween-based Drag Function for MainFrame
 local dragToggle = nil
 local dragSpeed = 0.25
 local dragStart = nil
@@ -456,7 +464,7 @@ ExecuteButton2.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- CHEAT PAGE 3: OP (Fly, Noclip, Map Transparency, Highlight)
+-- CHEAT PAGE 3: OP (Fly, Noclip, Map Transparency, Highlight, InstantRegen)
 ---------------------------
 local MT = Instance.new("TextBox")
 MT.Parent = Cheat3_Frame
@@ -504,33 +512,52 @@ HighlightAll.Name = "HighlightAll"
 Instance.new("UICorner", HighlightAll)
 HighlightAll.ZIndex = 2
 
-HighlightAll.MouseButton1Click:Connect(function()
-	local Players = game:GetService("Players")
-	if HighlightAll.Text == "Highlight All: Off" then
-		local function highlightCharacter(character)
-			if character and not character:FindFirstChildOfClass("Highlight") then
-				local hl = Instance.new("Highlight")
-				hl.Parent = character
-			end
-		end
-		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character then
-				highlightCharacter(plr.Character)
-			end
-			plr.CharacterAdded:Connect(highlightCharacter)
-		end
-		HighlightAll.Text = "Highlight All: On"
-		HighlightAll.BackgroundColor3 = Color3.new(0, 1, 0)
-	else
-		for _, plr in pairs(Players:GetPlayers()) do
-			if plr.Character then
-				for _, child in ipairs(plr.Character:GetChildren()) do
-					if child:IsA("Highlight") then child:Destroy() end
+-- InstantRegen with ForceField and auto-enabling noclip
+local regenConnection
+local InstantRegen = Instance.new("TextButton")
+InstantRegen.Parent = Cheat3_Frame
+InstantRegen.Position = UDim2.new(0.375, 0, 0.58, 0)
+InstantRegen.Size = UDim2.new(0, 100, 0, 25)
+InstantRegen.BackgroundColor3 = Color3.new(1, 0, 0)
+InstantRegen.TextScaled = true
+InstantRegen.Font = Enum.Font.FredokaOne
+InstantRegen.Text = "InstantRegen: Off"
+InstantRegen.Name = "InstantRegen"
+Instance.new("UICorner", InstantRegen)
+InstantRegen.ZIndex = 2
+
+InstantRegen.MouseButton1Click:Connect(function()
+	if InstantRegen.Text == "InstantRegen: Off" then
+		InstantRegen.Text = "InstantRegen: On"
+		InstantRegen.BackgroundColor3 = Color3.new(0, 1, 0)
+		-- Enable noclip to avoid kill bricks
+		noclipEnabled = true
+		regenConnection = RunService.Heartbeat:Connect(function()
+			local character = player.Character
+			if character then
+				local humanoid = character:FindFirstChild("Humanoid")
+				if humanoid then
+					humanoid.MaxHealth = 99999
+					humanoid.Health = 99999
+					if not character:FindFirstChild("ForceField") then
+						local ff = Instance.new("ForceField")
+						ff.Parent = character
+					end
 				end
 			end
+		end)
+	else
+		InstantRegen.Text = "InstantRegen: Off"
+		InstantRegen.BackgroundColor3 = Color3.new(1, 0, 0)
+		noclipEnabled = false
+		if regenConnection then
+			regenConnection:Disconnect()
 		end
-		HighlightAll.Text = "Highlight All: Off"
-		HighlightAll.BackgroundColor3 = Color3.new(1, 0, 0)
+		local character = player.Character
+		if character then
+			local ff = character:FindFirstChild("ForceField")
+			if ff then ff:Destroy() end
+		end
 	end
 end)
 
@@ -571,41 +598,32 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- MOBILE UP/DOWN BUTTONS (Outside MainFrame)
+-- FLY SPEED TEXTBOX (Placed at top–middle, always visible when fly is active)
 ---------------------------
-local UpButton = Instance.new("TextButton")
-UpButton.Name = "UpButton"
-UpButton.Parent = MainGui
-UpButton.Text = "Up"
-UpButton.Font = Enum.Font.FredokaOne
-UpButton.TextScaled = true
-UpButton.BackgroundColor3 = Color3.new(0, 1, 0)
--- Increased size for mobile: 60x30
-UpButton.Position = UDim2.new(0, 20, 1, -150)
-UpButton.Size = UDim2.new(0, 60, 0, 30)
-Instance.new("UICorner", UpButton)
-UpButton.Visible = false
+local FlySpeedBox = Instance.new("TextBox")
+FlySpeedBox.Name = "FlySpeedBox"
+FlySpeedBox.Parent = MainGui
+FlySpeedBox.Position = UDim2.new(0.5, -50, 0, 20)  -- Top–middle
+FlySpeedBox.Size = UDim2.new(0, 100, 0, 30)
+FlySpeedBox.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+FlySpeedBox.TextScaled = true
+FlySpeedBox.Font = Enum.Font.FredokaOne
+FlySpeedBox.PlaceholderText = "Fly Speed"
+FlySpeedBox.Text = tostring(flySpeed)
+Instance.new("UICorner", FlySpeedBox)
+FlySpeedBox.Visible = false
 
-local DownButton = Instance.new("TextButton")
-DownButton.Name = "DownButton"
-DownButton.Parent = MainGui
-DownButton.Text = "Down"
-DownButton.Font = Enum.Font.FredokaOne
-DownButton.TextScaled = true
-DownButton.BackgroundColor3 = Color3.new(1, 0, 0)
--- Increased size for mobile: 60x30
-DownButton.Position = UDim2.new(0, 80, 1, -150)
-DownButton.Size = UDim2.new(0, 60, 0, 30)
-Instance.new("UICorner", DownButton)
-DownButton.Visible = false
-
-UpButton.MouseButton1Down:Connect(function() mobileUp = true end)
-UpButton.MouseButton1Up:Connect(function() mobileUp = false end)
-DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
-DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
+FlySpeedBox.FocusLost:Connect(function(enterPressed)
+	local newSpeed = tonumber(FlySpeedBox.Text)
+	if newSpeed then
+		flySpeed = newSpeed
+	else
+		FlySpeedBox.Text = tostring(flySpeed)
+	end
+end)
 
 ---------------------------
--- FLY HANDLING (Smooth Rotation)
+-- FLY HANDLING (HD Admin–Style: Freezes Body and Follows Camera Smoothly)
 ---------------------------
 local bv, bg  -- BodyVelocity and BodyGyro
 local hdFlying = false
@@ -617,13 +635,15 @@ local function startFly_HD()
 	local hum = character:FindFirstChildOfClass("Humanoid")
 	if not hrp or not hum then return end
 
+	-- Freeze your body
 	hum.PlatformStand = true
+
+	-- Always show the FlySpeedBox when flying
+	FlySpeedBox.Visible = true
 
 	if UIS.TouchEnabled then
 		oldGravity = workspace.Gravity
 		workspace.Gravity = 0
-		UpButton.Visible = true
-		DownButton.Visible = true
 	end
 
 	bv = Instance.new("BodyVelocity", hrp)
@@ -632,7 +652,8 @@ local function startFly_HD()
 
 	bg = Instance.new("BodyGyro", hrp)
 	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-	bg.CFrame = CFrame.new(hrp.Position, hrp.Position + workspace.CurrentCamera.CFrame.LookVector)
+	-- Set initial rotation to camera's current CFrame
+	bg.CFrame = workspace.CurrentCamera.CFrame
 
 	hdFlying = true
 	local flyConn = RunService.RenderStepped:Connect(function()
@@ -643,25 +664,20 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
-		if UIS.TouchEnabled then
-			local horizontal = hum.MoveDirection
-			local vertical = 0
-			if mobileUp then vertical = vertical + 1 end
-			if mobileDown then vertical = vertical - 1 end
-			moveDir = Vector3.new(horizontal.X, vertical, horizontal.Z)
-		else
-			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-		end
+		-- PC controls
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
 
+		-- Normalize movement
 		if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
 
 		bv.Velocity = moveDir * flySpeed
-		local targetCFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
+		-- Smoothly rotate your character to match the camera's orientation
+		local targetCFrame = cam.CFrame
 		bg.CFrame = bg.CFrame:Lerp(targetCFrame, 0.1)
 	end)
 end
@@ -682,9 +698,8 @@ local function stopFly_HD()
 	if UIS.TouchEnabled and oldGravity then
 		workspace.Gravity = oldGravity
 		oldGravity = nil
-		UpButton.Visible = false
-		DownButton.Visible = false
 	end
+	FlySpeedBox.Visible = false
 end
 
 Fly.MouseButton1Click:Connect(function()
@@ -693,19 +708,13 @@ Fly.MouseButton1Click:Connect(function()
 		startFly_HD()
 		Fly.Text = "Fly: On"
 		Fly.BackgroundColor3 = Color3.new(0, 1, 0)
-		if UIS.TouchEnabled then
-			UpButton.Visible = true
-			DownButton.Visible = true
-		end
+		FlySpeedBox.Visible = true
 	else
 		flyEnabled = false
 		stopFly_HD()
 		Fly.Text = "Fly: Off"
 		Fly.BackgroundColor3 = Color3.new(1, 0, 0)
-		if UIS.TouchEnabled then
-			UpButton.Visible = false
-			DownButton.Visible = false
-		end
+		FlySpeedBox.Visible = false
 	end
 end)
 
