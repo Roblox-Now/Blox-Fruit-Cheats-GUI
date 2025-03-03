@@ -610,11 +610,10 @@ end
 local nameTagUpdateConnections = {}
 
 local function addNameTag(character, playerName)
-	-- Force attach only if there's a "Head"
 	local head = character:FindFirstChild("Head")
 	if not head then return end
 
-	-- Always remove any previous tag and add a fresh one.
+	-- Remove any existing tag and add new one.
 	removeNameTag(character)
 	
 	local billboard = Instance.new("BillboardGui")
@@ -671,7 +670,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
-		-- For every non-local player, apply the name tag
+		-- Apply name tag to every non-local player's head.
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player then
 				if plr.Character then
@@ -694,28 +693,28 @@ NameTagAll.MouseButton1Click:Connect(function()
 	end
 end)
 
--- RGB Picker Under NameTagAll Button
+-- RGB Picker Under NameTagAll Button (spaced out)
 local RBox = Instance.new("TextBox")
 RBox.Parent = Cheat3_Frame
-RBox.Size = UDim2.new(0, 40, 0, 25)
-RBox.Position = UDim2.new(0.675, 0, 0.80, 0)
+RBox.Size = UDim2.new(0, 50, 0, 25)
+RBox.Position = UDim2.new(0.65, 0, 0.80, 0)
 RBox.Text = "255"
 RBox.PlaceholderText = "R"
 Instance.new("UICorner", RBox)
 
 local GBox = Instance.new("TextBox")
 GBox.Parent = Cheat3_Frame
-GBox.Size = UDim2.new(0, 40, 0, 25)
-GBox.Position = UDim2.new(0.725, 0, 0.80, 0)
-GBox.Text = "255"
+GBox.Size = UDim2.new(0, 50, 0, 25)
+GBox.Position = UDim2.new(0.72, 0, 0.80, 0)
+GBox.Text = "0"
 GBox.PlaceholderText = "G"
 Instance.new("UICorner", GBox)
 
 local BBox = Instance.new("TextBox")
 BBox.Parent = Cheat3_Frame
-BBox.Size = UDim2.new(0, 40, 0, 25)
-BBox.Position = UDim2.new(0.775, 0, 0.80, 0)
-BBox.Text = "255"
+BBox.Size = UDim2.new(0, 50, 0, 25)
+BBox.Position = UDim2.new(0.79, 0, 0.80, 0)
+BBox.Text = "0"
 BBox.PlaceholderText = "B"
 Instance.new("UICorner", BBox)
 
@@ -898,8 +897,8 @@ UpButton.Text = "Up"
 UpButton.Font = Enum.Font.FredokaOne
 UpButton.TextScaled = true
 UpButton.BackgroundColor3 = Color3.new(0, 1, 0)
-UpButton.Position = UDim2.new(0, 20, 1, -150)
-UpButton.Size = UDim2.new(0, 48, 0, 25)
+UpButton.Position = UDim2.new(0, 20, 1, -160)
+UpButton.Size = UDim2.new(0, 60, 0, 30)
 Instance.new("UICorner", UpButton)
 UpButton.Visible = false
 
@@ -910,8 +909,8 @@ DownButton.Text = "Down"
 DownButton.Font = Enum.Font.FredokaOne
 DownButton.TextScaled = true
 DownButton.BackgroundColor3 = Color3.new(1, 0, 0)
-DownButton.Position = UDim2.new(0, 80, 1, -150)
-DownButton.Size = UDim2.new(0, 48, 0, 25)
+DownButton.Position = UDim2.new(0, 90, 1, -160)
+DownButton.Size = UDim2.new(0, 60, 0, 30)
 Instance.new("UICorner", DownButton)
 DownButton.Visible = false
 
@@ -976,6 +975,7 @@ local function startFly_HD()
 	bg = Instance.new("BodyGyro", hrp)
 	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
 	bg.P = 10000
+	-- Initialize with the current camera CFrame
 	bg.CFrame = workspace.CurrentCamera.CFrame
 
 	hdFlying = true
@@ -996,7 +996,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
-		-- If on mobile and no keyboard input, fallback to Humanoid.MoveDirection
+		-- If on mobile and no keyboard input, fallback to Humanoid.MoveDirection:
 		if UIS.TouchEnabled and moveDir.Magnitude == 0 then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h then
@@ -1004,15 +1004,18 @@ local function startFly_HD()
 			end
 		end
 
-		-- Always add mobile vertical input
+		-- Always add mobile vertical input:
 		if mobileUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
-		if moveDir.Magnitude > 0 then
-			moveDir = moveDir.Unit
+		-- Instead of using cam.CFrame:VectorToWorldSpace, build the world move direction manually:
+		local camCFrame = cam.CFrame
+		local worldMoveDir = (camCFrame.RightVector * moveDir.X) + (Vector3.new(0,1,0) * moveDir.Y) + (camCFrame.LookVector * moveDir.Z)
+		
+		if worldMoveDir.Magnitude > 0 then
+			worldMoveDir = worldMoveDir.Unit
 		end
-
-		local worldMoveDir = cam.CFrame:VectorToWorldSpace(moveDir)
+		
 		bv.Velocity = worldMoveDir * flySpeed
 		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
 	end)
