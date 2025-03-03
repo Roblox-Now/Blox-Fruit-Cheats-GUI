@@ -23,7 +23,7 @@
 -- SETTINGS & VARIABLES
 ---------------------------
 local DevMode = true
-local Menu_Version = "V1.1.8 BETA"
+local Menu_Version = "V1.1.1 BETA"
 local Menu_Name = "Universal GUI"
 local titleText = "Universal GUI"
 
@@ -39,15 +39,15 @@ local noclipEnabled = false
 local flySpeed = 50
 local oldGravity = nil  -- for mobile gravity restore
 
--- Mobile vertical control flags
+-- Mobile vertical control flags (for touch)
 local mobileUp = false
 local mobileDown = false
 
 local Page = 1
 local regenConnection = nil  -- for InstantRegen
 
--- Tween durations (in seconds)
-local buttonTweenTime = 0.1   -- for OpenButton hover/click effects
+-- Tween durations
+local buttonTweenTime = 0.1
 local mainframeTweenTime = 0.25
 
 ---------------------------
@@ -226,7 +226,7 @@ makeDraggable(MainFrame)
 makeDraggable(OpenButton)
 
 ---------------------------
--- OPEN/CLOSE MAINFRAME WITH CENTER-BASED TWEEN
+-- OPEN/CLOSE MAINFRAME WITH TWEEN
 ---------------------------
 OpenButton.MouseButton1Click:Connect(function()
 	local clickTween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = clickSize})
@@ -532,7 +532,6 @@ MT.Name = "MT"
 MT.PlaceholderText = "Map Transparency"
 Instance.new("UICorner", MT)
 
--- Fly Toggle
 local Fly = Instance.new("TextButton")
 Fly.Parent = Cheat3_Frame
 Fly.Position = UDim2.new(0.375, 0, 0.42, 0)
@@ -544,7 +543,6 @@ Fly.Text = "Fly: Off"
 Fly.Name = "Fly"
 Instance.new("UICorner", Fly)
 
--- Noclip Toggle
 local Noclip = Instance.new("TextButton")
 Noclip.Parent = Cheat3_Frame
 Noclip.Position = UDim2.new(0.675, 0, 0.42, 0)
@@ -556,7 +554,6 @@ Noclip.Text = "Noclip: Off"
 Noclip.Name = "Noclip"
 Instance.new("UICorner", Noclip)
 
--- Highlight All Toggle
 local HighlightAll = Instance.new("TextButton")
 HighlightAll.Parent = Cheat3_Frame
 HighlightAll.Position = UDim2.new(0.675, 0, 0.58, 0)
@@ -569,7 +566,6 @@ HighlightAll.Name = "HighlightAll"
 Instance.new("UICorner", HighlightAll)
 HighlightAll.ZIndex = 2
 
--- InstantRegen Toggle
 local InstantRegen = Instance.new("TextButton")
 InstantRegen.Parent = Cheat3_Frame
 InstantRegen.Position = UDim2.new(0.375, 0, 0.58, 0)
@@ -582,7 +578,6 @@ InstantRegen.Name = "InstantRegen"
 Instance.new("UICorner", InstantRegen)
 InstantRegen.ZIndex = 2
 
--- RefreshCharacter Button
 local RefreshCharacter = Instance.new("TextButton")
 RefreshCharacter.Parent = MainFrame
 RefreshCharacter.Position = UDim2.new(0.25, 0, -0.094, 0)
@@ -602,35 +597,57 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (with helper functions)
+-- NAME TAG ALL (with distance display and custom RGB color)
 ---------------------------
 local function getNameTagColor()
-	return Color3.new(1,1,1)  -- modify if you add RGB inputs
+	-- Read RGB values from textboxes in 0-255 range and normalize them.
+	local r = tonumber(RBox.Text) or 255
+	local g = tonumber(GBox.Text) or 255
+	local b = tonumber(BBox.Text) or 255
+	return Color3.new(r/255, g/255, b/255)
 end
 
+local nameTagUpdateConnections = {}
+
 local function addNameTag(character, playerName)
-	if character and not character:FindFirstChild("NameTag") then
+	-- Force attach only if there's a "Head"
+	local head = character:FindFirstChild("Head")
+	if not head then return end
+
+	if not character:FindFirstChild("NameTag") then
 		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "NameTag"
-		billboard.Adornee = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
+		billboard.Adornee = head
 		billboard.Parent = character
-		billboard.Size = UDim2.new(0, 200, 0, 50)
-		billboard.StudsOffset = Vector3.new(0, 3, 0)
+		billboard.Size = UDim2.new(0, 120, 0, 25)
+		billboard.StudsOffset = Vector3.new(0, 2, 0)
 		billboard.AlwaysOnTop = true
+		billboard.Enabled = true
 
 		local textLabel = Instance.new("TextLabel", billboard)
 		textLabel.Size = UDim2.new(1, 0, 1, 0)
 		textLabel.BackgroundTransparency = 1
-		textLabel.Text = playerName
 		textLabel.TextColor3 = getNameTagColor()
 		textLabel.TextScaled = true
 		textLabel.Font = Enum.Font.FredokaOne
+
+		local conn = RunService.RenderStepped:Connect(function()
+			local localHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			local dist = localHRP and math.floor((head.Position - localHRP.Position).Magnitude) or 0
+			textLabel.Text = playerName .. " [" .. dist .. " Studs Away]"
+			textLabel.TextColor3 = getNameTagColor()
+		end)
+		nameTagUpdateConnections[billboard] = conn
 	end
 end
 
 local function removeNameTag(character)
 	local tag = character:FindFirstChild("NameTag")
 	if tag then
+		if nameTagUpdateConnections[tag] then
+			nameTagUpdateConnections[tag]:Disconnect()
+			nameTagUpdateConnections[tag] = nil
+		end
 		tag:Destroy()
 	end
 end
@@ -675,6 +692,31 @@ NameTagAll.MouseButton1Click:Connect(function()
 	end
 end)
 
+-- RGB Picker Under NameTagAll Button
+local RBox = Instance.new("TextBox")
+RBox.Parent = Cheat3_Frame
+RBox.Size = UDim2.new(0, 40, 0, 25)
+RBox.Position = UDim2.new(0.675, 0, 0.80, 0)
+RBox.Text = "255"
+RBox.PlaceholderText = "R"
+Instance.new("UICorner", RBox)
+
+local GBox = Instance.new("TextBox")
+GBox.Parent = Cheat3_Frame
+GBox.Size = UDim2.new(0, 40, 0, 25)
+GBox.Position = UDim2.new(0.725, 0, 0.80, 0)
+GBox.Text = "255"
+GBox.PlaceholderText = "G"
+Instance.new("UICorner", GBox)
+
+local BBox = Instance.new("TextBox")
+BBox.Parent = Cheat3_Frame
+BBox.Size = UDim2.new(0, 40, 0, 25)
+BBox.Position = UDim2.new(0.775, 0, 0.80, 0)
+BBox.Text = "255"
+BBox.PlaceholderText = "B"
+Instance.new("UICorner", BBox)
+
 ---------------------------
 -- FULLBRIGHT TOGGLE
 ---------------------------
@@ -707,7 +749,7 @@ FullBright.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- SEARCH PLAYER / TELEPORT
+-- SEARCH PLAYER (Auto-Updating Scrolling Frame)
 ---------------------------
 local SearchPlayer = Instance.new("ScrollingFrame")
 SearchPlayer.Parent = Cheat1_Frame
@@ -723,57 +765,56 @@ listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 5)
 
+local searchButtons = {}  -- key: player.UserId, value: the TextButton
+
 local function updatePlayerList()
-	for _, child in ipairs(SearchPlayer:GetChildren()) do
-		if child:IsA("TextButton") and child.Name ~= "Refresh" then
-			child:Destroy()
-		end
-	end
-
 	local players = game.Players:GetPlayers()
-	table.sort(players, function(a, b)
-		return a.Name < b.Name
-	end)
-
-	for i, plr in ipairs(players) do
-		if plr ~= player then
-			local targetPlayer = plr
-			local tpButton = Instance.new("TextButton")
-			tpButton.Parent = SearchPlayer
-			tpButton.Size = UDim2.new(1, 0, 0, 15)
-			tpButton.LayoutOrder = i
-			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
-			tpButton.TextScaled = true
-			tpButton.Font = Enum.Font.FredokaOne
-			tpButton.Text = targetPlayer.Name
-			tpButton.ZIndex = 2
-			Instance.new("UICorner", tpButton)
-			tpButton.Activated:Connect(function()
-				if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-					player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
-				end
-			end)
+	table.sort(players, function(a, b) return a.Name < b.Name end)
+	-- Remove buttons for players no longer present
+	for userId, btn in pairs(searchButtons) do
+		local found = false
+		for _, plr in ipairs(players) do
+			if plr.UserId == userId and plr ~= player then
+				found = true
+				break
+			end
+		end
+		if not found then
+			btn:Destroy()
+			searchButtons[userId] = nil
 		end
 	end
+	-- Add/update buttons for current players
+	local layoutOrder = 1
+	for _, plr in ipairs(players) do
+		if plr ~= player then
+			if not searchButtons[plr.UserId] then
+				local tpButton = Instance.new("TextButton")
+				tpButton.Parent = SearchPlayer
+				tpButton.Size = UDim2.new(1, 0, 0, 15)
+				tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
+				tpButton.TextScaled = true
+				tpButton.Font = Enum.Font.FredokaOne
+				tpButton.Text = plr.Name
+				tpButton.ZIndex = 2
+				Instance.new("UICorner", tpButton)
+				tpButton.Activated:Connect(function()
+					if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+					end
+				end)
+				searchButtons[plr.UserId] = tpButton
+			else
+				searchButtons[plr.UserId].Text = plr.Name
+			end
+			searchButtons[plr.UserId].LayoutOrder = layoutOrder
+			layoutOrder = layoutOrder + 1
+		end
+	end
+	SearchPlayer.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
 end
 
-local refreshButton = Instance.new("TextButton")
-refreshButton.Name = "Refresh"
-refreshButton.Parent = SearchPlayer
-refreshButton.Size = UDim2.new(1, 0, 0, 20)
-refreshButton.Text = "Refresh"
-refreshButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-refreshButton.Font = Enum.Font.FredokaOne
-refreshButton.TextScaled = true
-refreshButton.LayoutOrder = 0
-Instance.new("UICorner", refreshButton)
-refreshButton.MouseButton1Click:Connect(function()
-	updatePlayerList()
-end)
-
-updatePlayerList()
-game.Players.PlayerAdded:Connect(function() updatePlayerList() end)
-game.Players.PlayerRemoving:Connect(function() updatePlayerList() end)
+RunService.RenderStepped:Connect(function() updatePlayerList() end)
 
 ---------------------------
 -- FPS LABEL
@@ -905,7 +946,7 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- FLY HANDLING (HD Admin–Style) with Smooth Rotation & Proper Velocity
+-- FLY HANDLING (HD Admin–Style) with Smooth Rotation & Unified Input
 ---------------------------
 local bv, bg  -- BodyVelocity and BodyGyro
 local hdFlying = false
@@ -933,7 +974,6 @@ local function startFly_HD()
 	bg = Instance.new("BodyGyro", hrp)
 	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
 	bg.P = 10000
-	-- Initialize the gyro to the camera's current CFrame
 	bg.CFrame = workspace.CurrentCamera.CFrame
 
 	hdFlying = true
@@ -946,31 +986,33 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
-		if UIS.TouchEnabled then
-			local horizontal = hum.MoveDirection
-			local vertical = 0
-			if mobileUp then vertical = vertical + 1 end
-			if mobileDown then vertical = vertical - 1 end
-			moveDir = Vector3.new(horizontal.X, vertical, horizontal.Z)
-		else
-			-- Use WASD in local camera space:
-			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
-			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
-			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
+		-- Use keyboard input for PC:
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
+
+		-- If on mobile and no keyboard input, fall back to character's MoveDirection:
+		if UIS.TouchEnabled and moveDir.Magnitude == 0 then
+			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if h then
+				moveDir = h.MoveDirection
+			end
 		end
+
+		-- Always add vertical mobile input:
+		if mobileUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
+		if mobileDown then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
 		if moveDir.Magnitude > 0 then
 			moveDir = moveDir.Unit
 		end
 
-		-- Convert local moveDir (in camera space) to world space:
 		local worldMoveDir = cam.CFrame:VectorToWorldSpace(moveDir)
 		bv.Velocity = worldMoveDir * flySpeed
 
-		-- Smoothly interpolate the gyro's CFrame toward the camera's CFrame for smooth rotation
 		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
 	end)
 end
@@ -985,11 +1027,11 @@ local function stopFly_HD()
 		end
 	end
 	if bv then
-		bv:Destroy()
+		bv:Destroy() 
 		bv = nil
 	end
 	if bg then
-		bg:Destroy()
+		bg:Destroy() 
 		bg = nil
 	end
 	if UIS.TouchEnabled and oldGravity then
