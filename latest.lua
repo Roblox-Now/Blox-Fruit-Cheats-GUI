@@ -33,6 +33,12 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
+local PhysicsService = game:GetService("PhysicsService")
+
+-- Setup custom collision group "Noclip"
+pcall(function() PhysicsService:CreateCollisionGroup("Noclip") end)
+PhysicsService:CollisionGroupSetCollidable("Noclip", "Default", false)
+PhysicsService:CollisionGroupSetCollidable("Noclip", "Noclip", false)
 
 local flyEnabled = false
 local noclipEnabled = false
@@ -71,14 +77,20 @@ player.CharacterAdded:Connect(function(character)
 end)
 
 ---------------------------
--- COLLISION UPDATE (Noclip)
+-- COLLISION UPDATE (Enhanced Noclip)
 ---------------------------
 RunService.RenderStepped:Connect(function()
 	local character = player.Character
 	if character then
 		for _, part in pairs(character:GetDescendants()) do
 			if part:IsA("BasePart") then
-				part.CanCollide = not noclipEnabled
+				if noclipEnabled then
+					part.CanCollide = false
+					PhysicsService:SetPartCollisionGroup(part, "Noclip")
+				else
+					part.CanCollide = true
+					PhysicsService:SetPartCollisionGroup(part, "Default")
+				end
 			end
 		end
 	end
@@ -630,7 +642,7 @@ BBox.PlaceholderText = "B"
 Instance.new("UICorner", BBox)
 
 ---------------------------
--- NAME TAG ALL (Custom)
+-- NAME TAG ALL (Custom) & Default Name Toggle
 ---------------------------
 local function getNameTagColor()
 	if RBox and GBox and BBox then
@@ -704,7 +716,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
-		-- Hide default name labels for non-local players
+		-- Hide default name labels and apply custom tags.
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player and plr.Character then
 				setDefaultNameVisibility(plr.Character, false)
@@ -1017,7 +1029,7 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0,0,0)
-		-- PC: W moves forward, S backward, A/D sideways.
+		-- PC input: W forward, S backward, A/D sideways.
 		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
@@ -1025,7 +1037,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
 
-		-- On mobile, use only the horizontal component of Humanoid.MoveDirection.
+		-- On mobile, use only horizontal component from Humanoid.MoveDirection.
 		if UIS.TouchEnabled then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h and h.MoveDirection.Magnitude > 0 then
@@ -1034,7 +1046,7 @@ local function startFly_HD()
 			end
 		end
 
-		-- Always add vertical input from mobile Up/Down buttons.
+		-- Add vertical input from mobile Up/Down buttons.
 		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
 
