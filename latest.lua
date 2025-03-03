@@ -39,14 +39,13 @@ local noclipEnabled = false
 local flySpeed = 50
 local oldGravity = nil  -- for mobile gravity restore
 
--- Mobile vertical control flags (for touch)
+-- Mobile vertical control flags
 local mobileUp = false
 local mobileDown = false
 
 local Page = 1
 local regenConnection = nil  -- for InstantRegen
 
--- Tween durations
 local buttonTweenTime = 0.1
 local mainframeTweenTime = 0.25
 
@@ -93,7 +92,6 @@ Instance.new("UICorner", OpenButton)
 OpenButton.Image = "http://www.roblox.com/asset/?id=104276980467632"
 OpenButton.ImageColor3 = Color3.new(1, 1, 1)
 
--- OpenButton effects
 local normalSize = UDim2.new(0, 50, 0, 50)
 local hoverSize = UDim2.new(0, 45, 0, 45)
 local clickSize = UDim2.new(0, 55, 0, 55)
@@ -129,7 +127,6 @@ local centerPos = UDim2.new(
 	originalPos.Y.Scale, originalPos.Y.Offset + originalSize.Y.Offset/2
 )
 
--- Title, Version, and Credits
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "Title"
 TitleLabel.Parent = MainFrame
@@ -163,7 +160,6 @@ Credits.Text = "Made By @Roblo1sjG / HYLO"
 Credits.TextScaled = true
 Instance.new("UICorner", Credits)
 
--- Disconnect & Rejoin Buttons
 local DisconnectButton = Instance.new("TextButton")
 DisconnectButton.Name = "DisconnectButton"
 DisconnectButton.Text = "Disconnect"
@@ -597,10 +593,9 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (applied to every player’s head, live updating)
+-- NAME TAG ALL (applied to every non-local player's Head)
 ---------------------------
 local function getNameTagColor()
-	-- Convert 0-255 values to Color3
 	local r = tonumber(RBox.Text) or 255
 	local g = tonumber(GBox.Text) or 255
 	local b = tonumber(BBox.Text) or 255
@@ -612,8 +607,6 @@ local nameTagUpdateConnections = {}
 local function addNameTag(character, playerName)
 	local head = character:FindFirstChild("Head")
 	if not head then return end
-
-	-- Remove any existing tag
 	removeNameTag(character)
 	
 	local billboard = Instance.new("BillboardGui")
@@ -624,14 +617,14 @@ local function addNameTag(character, playerName)
 	billboard.StudsOffset = Vector3.new(0, 2, 0)
 	billboard.AlwaysOnTop = true
 	billboard.Enabled = true
-
+	
 	local textLabel = Instance.new("TextLabel", billboard)
 	textLabel.Size = UDim2.new(1, 0, 1, 0)
 	textLabel.BackgroundTransparency = 1
 	textLabel.TextColor3 = getNameTagColor()
 	textLabel.TextScaled = true
 	textLabel.Font = Enum.Font.FredokaOne
-
+	
 	local conn = RunService.RenderStepped:Connect(function()
 		local localHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		local dist = localHRP and math.floor((head.Position - localHRP.Position).Magnitude) or 0
@@ -665,12 +658,12 @@ NameTagAll.Name = "NameTagAll"
 Instance.new("UICorner", NameTagAll)
 NameTagAll.ZIndex = 2
 
--- When toggled, apply tag to every non-local player's head and connect CharacterAdded events.
 NameTagAll.MouseButton1Click:Connect(function()
 	if not nameTagAllEnabled then
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
+		-- Loop through every non-local player and apply tag.
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player then
 				if plr.Character then
@@ -695,7 +688,23 @@ NameTagAll.MouseButton1Click:Connect(function()
 	end
 end)
 
--- RGB Picker Under NameTagAll Button (spread out)
+-- Also update tags on PlayerAdded/Removing
+game.Players.PlayerAdded:Connect(function(plr)
+	if plr ~= player then
+		plr.CharacterAdded:Connect(function(character)
+			if nameTagAllEnabled then
+				addNameTag(character, plr.Name)
+			end
+		end)
+	end
+end)
+game.Players.PlayerRemoving:Connect(function(plr)
+	if plr.Character then
+		removeNameTag(plr.Character)
+	end
+end)
+
+-- RGB Picker Under NameTagAll Button
 local RBox = Instance.new("TextBox")
 RBox.Parent = Cheat3_Frame
 RBox.Size = UDim2.new(0, 50, 0, 25)
@@ -768,7 +777,7 @@ listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 5)
 
-local searchButtons = {}  -- key: player.UserId, value: the TextButton
+local searchButtons = {}
 
 local function updatePlayerList()
 	local players = game.Players:GetPlayers()
@@ -947,7 +956,7 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- FLY HANDLING (HD Admin–Style) with Smooth Rotation & Unified Input
+-- FLY HANDLER (HD Admin–Style) with PC/ Mobile Unified Input
 ---------------------------
 local bv, bg  -- BodyVelocity and BodyGyro
 local hdFlying = false
@@ -986,23 +995,22 @@ local function startFly_HD()
 		end
 
 		local cam = workspace.CurrentCamera
-		local moveDir = Vector3.new(0, 0, 0)
-		-- Use keyboard input for PC:
-		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+		local moveDir = Vector3.new(0,0,0)
+		-- PC keyboard input (invert LookVector so that W moves you in the camera's forward direction)
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir - cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
 		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
 
-		-- For mobile, if no keyboard input, default to forward direction.
-		if UIS.TouchEnabled and moveDir.Magnitude == 0 then
-			moveDir = cam.CFrame.LookVector
+		-- On mobile, if there is joystick input, use the Humanoid's MoveDirection.
+		if UIS.TouchEnabled then
+			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if h and h.MoveDirection.Magnitude > 0 then
+				moveDir = h.MoveDirection
+			end
 		end
-
-		-- Always add mobile vertical input:
-		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
-		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
 
 		if moveDir.Magnitude > 0 then
 			moveDir = moveDir.Unit
@@ -1023,11 +1031,11 @@ local function stopFly_HD()
 		end
 	end
 	if bv then
-		bv:Destroy() 
+		bv:Destroy()
 		bv = nil
 	end
 	if bg then
-		bg:Destroy() 
+		bg:Destroy()
 		bg = nil
 	end
 	if UIS.TouchEnabled and oldGravity then
