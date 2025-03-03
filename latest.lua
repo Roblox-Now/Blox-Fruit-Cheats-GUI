@@ -226,7 +226,7 @@ makeDraggable(MainFrame)
 makeDraggable(OpenButton)
 
 ---------------------------
--- OPEN/CLOSE MAINFRAME
+-- OPEN/CLOSE MAINFRAME WITH TWEEN
 ---------------------------
 OpenButton.MouseButton1Click:Connect(function()
 	local clickTween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = clickSize})
@@ -597,10 +597,9 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (with distance display)
+-- NAME TAG ALL (with distance display and RGB Picker)
 ---------------------------
 local function getNameTagColor()
-	-- Read RGB values from our picker textboxes
 	local r = tonumber(RBox.Text) or 1
 	local g = tonumber(GBox.Text) or 1
 	local b = tonumber(BBox.Text) or 1
@@ -621,6 +620,7 @@ local function addNameTag(character, playerName)
 		billboard.Size = UDim2.new(0, 200, 0, 50)
 		billboard.StudsOffset = Vector3.new(0, 3, 0)
 		billboard.AlwaysOnTop = true
+		billboard.Enabled = true  -- ensure it's enabled
 
 		local textLabel = Instance.new("TextLabel", billboard)
 		textLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -958,7 +958,7 @@ local function startFly_HD()
 
 	hum.PlatformStand = true
 	FlySpeedBox.Visible = true
-	-- Show mobile up/down buttons if on touch
+	-- Show mobile up/down buttons if touch is enabled
 	if UIS.TouchEnabled then
 		UpButton.Visible = true
 		DownButton.Visible = true
@@ -985,7 +985,7 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
-		-- Check for keyboard input (PC style)
+		-- Use keyboard input for PC
 		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
@@ -993,7 +993,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
-		-- If no keyboard input and on mobile, fall back to Humanoid.MoveDirection for horizontal
+		-- If no keyboard input and on mobile, use the character's MoveDirection
 		if UIS.TouchEnabled and moveDir.Magnitude == 0 then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h then
@@ -1001,7 +1001,7 @@ local function startFly_HD()
 			end
 		end
 
-		-- Always add vertical input from mobile buttons
+		-- Always add mobile vertical input
 		if mobileUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
