@@ -37,7 +37,7 @@ local Lighting = game:GetService("Lighting")
 local flyEnabled = false
 local noclipEnabled = false
 local flySpeed = 50
-local oldGravity = nil
+local oldGravity = nil  -- used for mobile
 
 -- Mobile vertical flags
 local mobileUp = false
@@ -85,16 +85,16 @@ MainGui.Parent = player:FindFirstChildOfClass("PlayerGui")
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Name = "OpenButton"
 OpenButton.Parent = MainGui
-OpenButton.Size = UDim2.new(0, 50, 0, 50)
-OpenButton.Position = UDim2.new(0.032, 0, 0.386, 0)
-OpenButton.AnchorPoint = Vector2.new(0.5, 0.5)
+OpenButton.Size = UDim2.new(0,50,0,50)
+OpenButton.Position = UDim2.new(0.032,0,0.386,0)
+OpenButton.AnchorPoint = Vector2.new(0.5,0.5)
 Instance.new("UICorner", OpenButton)
 OpenButton.Image = "http://www.roblox.com/asset/?id=104276980467632"
-OpenButton.ImageColor3 = Color3.new(1, 1, 1)
+OpenButton.ImageColor3 = Color3.new(1,1,1)
 
-local normalSize = UDim2.new(0, 50, 0, 50)
-local hoverSize = UDim2.new(0, 45, 0, 45)
-local clickSize = UDim2.new(0, 55, 0, 55)
+local normalSize = UDim2.new(0,50,0,50)
+local hoverSize = UDim2.new(0,45,0,45)
+local clickSize = UDim2.new(0,55,0,55)
 local isHovering = false
 
 OpenButton.MouseEnter:Connect(function()
@@ -593,6 +593,33 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
+-- RGB PICKER (Must be created before getNameTagColor)
+---------------------------
+local RBox = Instance.new("TextBox")
+RBox.Parent = Cheat3_Frame
+RBox.Size = UDim2.new(0,50,0,25)
+RBox.Position = UDim2.new(0.65,0,0.80,0)
+RBox.Text = "255"
+RBox.PlaceholderText = "R"
+Instance.new("UICorner", RBox)
+
+local GBox = Instance.new("TextBox")
+GBox.Parent = Cheat3_Frame
+GBox.Size = UDim2.new(0,50,0,25)
+GBox.Position = UDim2.new(0.72,0,0.80,0)
+GBox.Text = "255"
+GBox.PlaceholderText = "G"
+Instance.new("UICorner", GBox)
+
+local BBox = Instance.new("TextBox")
+BBox.Parent = Cheat3_Frame
+BBox.Size = UDim2.new(0,50,0,25)
+BBox.Position = UDim2.new(0.79,0,0.80,0)
+BBox.Text = "255"
+BBox.PlaceholderText = "B"
+Instance.new("UICorner", BBox)
+
+---------------------------
 -- NAME TAG ALL (Every non-local player's Head)
 ---------------------------
 local function getNameTagColor()
@@ -701,31 +728,6 @@ game.Players.PlayerRemoving:Connect(function(plr)
 		removeNameTag(plr.Character)
 	end
 end)
-
--- RGB Picker Under NameTagAll Button
-local RBox = Instance.new("TextBox")
-RBox.Parent = Cheat3_Frame
-RBox.Size = UDim2.new(0,50,0,25)
-RBox.Position = UDim2.new(0.65,0,0.80,0)
-RBox.Text = "255"
-RBox.PlaceholderText = "R"
-Instance.new("UICorner", RBox)
-
-local GBox = Instance.new("TextBox")
-GBox.Parent = Cheat3_Frame
-GBox.Size = UDim2.new(0,50,0,25)
-GBox.Position = UDim2.new(0.72,0,0.80,0)
-GBox.Text = "255"
-GBox.PlaceholderText = "G"
-Instance.new("UICorner", GBox)
-
-local BBox = Instance.new("TextBox")
-BBox.Parent = Cheat3_Frame
-BBox.Size = UDim2.new(0,50,0,25)
-BBox.Position = UDim2.new(0.79,0,0.80,0)
-BBox.Text = "255"
-BBox.PlaceholderText = "B"
-Instance.new("UICorner", BBox)
 
 ---------------------------
 -- FULLBRIGHT TOGGLE
@@ -927,7 +929,7 @@ DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
 DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
 
 ---------------------------
--- ExecuteButton3 (Map Transparency) - Skip players
+-- ExecuteButton3 (Map Transparency) - Skips player models
 ---------------------------
 local ExecuteButton3 = Instance.new("TextButton")
 ExecuteButton3.Parent = Cheat3_Frame
@@ -954,7 +956,7 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- FLY HANDLER (HD Admin–Style)
+-- FLY HANDLER (HD Admin–Style) with Corrected PC Direction & Mobile Vertical Controls
 ---------------------------
 local bv, bg
 local hdFlying = false
@@ -994,7 +996,7 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0,0,0)
-		-- PC input: (W = forward, S = backward, etc.)
+		-- PC: Use camera vectors so that W moves forward
 		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
@@ -1002,7 +1004,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
 
-		-- On mobile, if joystick input exists, use horizontal component of Humanoid.MoveDirection
+		-- On mobile, if there is joystick input, use only its horizontal component.
 		if UIS.TouchEnabled then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h and h.MoveDirection.Magnitude > 0 then
@@ -1011,7 +1013,7 @@ local function startFly_HD()
 			end
 		end
 
-		-- Always add mobile vertical input
+		-- Always add mobile vertical input from Up/Down buttons.
 		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
 
