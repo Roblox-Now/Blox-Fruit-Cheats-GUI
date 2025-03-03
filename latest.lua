@@ -33,6 +33,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
+local PhysicsService = game:GetService("PhysicsService")
 
 local flyEnabled = false
 local noclipEnabled = false
@@ -71,19 +72,45 @@ player.CharacterAdded:Connect(function(character)
 end)
 
 ---------------------------
--- COLLISION UPDATE (Noclip)
+-- ENHANCED Noclip (Stronger: No collisions at all)
 ---------------------------
-RunService.RenderStepped:Connect(function()
+local function enableNoclip()
 	local character = player.Character
-	if character then
-		for _, part in pairs(character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = not noclipEnabled
-			end
+	if not character then return end
+	-- Disable collisions and make parts massless (to avoid being pushed)
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+			part.Massless = true
 		end
 	end
-end)
+	-- Use Heartbeat to constantly enforce noclip on every BasePart
+	spawn(function()
+		while noclipEnabled and character.Parent do
+			for _, part in ipairs(character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = false
+					part.Massless = true
+				end
+			end
+			RunService.Heartbeat:Wait()
+		end
+	end)
+end
 
+local function disableNoclip()
+	local character = player.Character
+	if not character then return end
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = true
+			part.Massless = false
+		end
+	end
+end
+
+-- Remove the old noclip RenderStepped loop below and use the new toggle.
+-- (This button now toggles our stronger noclip)
 ---------------------------
 -- MAIN GUI SETUP
 ---------------------------
@@ -603,7 +630,7 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- RGB PICKER (Placed under NameTagAll Button)
+-- RGB PICKER (Under NameTagAll Button)
 ---------------------------
 local RBox = Instance.new("TextBox")
 RBox.Parent = Cheat3_Frame
@@ -630,7 +657,7 @@ BBox.PlaceholderText = "B"
 Instance.new("UICorner", BBox)
 
 ---------------------------
--- NAME TAG ALL (Custom)
+-- NAME TAG ALL (Custom & Default Toggle)
 ---------------------------
 local function getNameTagColor()
 	if RBox and GBox and BBox then
@@ -704,7 +731,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
-		-- Hide default name labels for non-local players
+		-- Hide default name labels and apply custom tags.
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player and plr.Character then
 				setDefaultNameVisibility(plr.Character, false)
@@ -977,7 +1004,7 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- FLY HANDLER (HD Admin–Style) with Corrected PC Direction & Mobile Vertical Controls
+-- FLY HANDLER (HD Admin–Style) with Corrected PC & Mobile Controls
 ---------------------------
 local bv, bg
 local hdFlying = false
@@ -1017,7 +1044,7 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0,0,0)
-		-- PC: W moves forward, S backward, A/D sideways.
+		-- PC input: W forward, S backward, A/D sideways.
 		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
@@ -1025,7 +1052,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
 
-		-- On mobile, use only the horizontal component of Humanoid.MoveDirection.
+		-- On mobile, use horizontal component from Humanoid.MoveDirection.
 		if UIS.TouchEnabled then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h and h.MoveDirection.Magnitude > 0 then
@@ -1034,7 +1061,7 @@ local function startFly_HD()
 			end
 		end
 
-		-- Always add vertical input from mobile Up/Down buttons.
+		-- Add vertical input from mobile Up/Down buttons.
 		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
 
@@ -1092,9 +1119,11 @@ Noclip.MouseButton1Click:Connect(function()
 	if noclipEnabled then
 		Noclip.Text = "Noclip: On"
 		Noclip.BackgroundColor3 = Color3.new(0,1,0)
+		enableNoclip()
 	else
 		Noclip.Text = "Noclip: Off"
 		Noclip.BackgroundColor3 = Color3.new(1,0,0)
+		disableNoclip()
 	end
 end)
 
