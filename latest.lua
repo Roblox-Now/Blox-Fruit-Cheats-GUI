@@ -600,7 +600,11 @@ end)
 -- NAME TAG ALL (with distance display)
 ---------------------------
 local function getNameTagColor()
-	return Color3.new(1,1,1)
+	-- Read RGB values from our picker textboxes
+	local r = tonumber(RBox.Text) or 1
+	local g = tonumber(GBox.Text) or 1
+	local b = tonumber(BBox.Text) or 1
+	return Color3.new(r, g, b)
 end
 
 local nameTagUpdateConnections = {}
@@ -629,6 +633,7 @@ local function addNameTag(character, playerName)
 			local localHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			local dist = localHRP and math.floor((adornee.Position - localHRP.Position).Magnitude) or 0
 			textLabel.Text = playerName .. " [" .. dist .. " Studs Away]"
+			textLabel.TextColor3 = getNameTagColor()
 		end)
 		nameTagUpdateConnections[billboard] = conn
 	end
@@ -684,6 +689,31 @@ NameTagAll.MouseButton1Click:Connect(function()
 		end
 	end
 end)
+
+-- RGB Picker Under NameTagAll Button
+local RBox = Instance.new("TextBox")
+RBox.Parent = Cheat3_Frame
+RBox.Size = UDim2.new(0, 40, 0, 25)
+RBox.Position = UDim2.new(0.675, 0, 0.80, 0)
+RBox.Text = "1"
+RBox.PlaceholderText = "R"
+Instance.new("UICorner", RBox)
+
+local GBox = Instance.new("TextBox")
+GBox.Parent = Cheat3_Frame
+GBox.Size = UDim2.new(0, 40, 0, 25)
+GBox.Position = UDim2.new(0.725, 0, 0.80, 0)
+GBox.Text = "1"
+GBox.PlaceholderText = "G"
+Instance.new("UICorner", GBox)
+
+local BBox = Instance.new("TextBox")
+BBox.Parent = Cheat3_Frame
+BBox.Size = UDim2.new(0, 40, 0, 25)
+BBox.Position = UDim2.new(0.775, 0, 0.80, 0)
+BBox.Text = "1"
+BBox.PlaceholderText = "B"
+Instance.new("UICorner", BBox)
 
 ---------------------------
 -- FULLBRIGHT TOGGLE
@@ -779,7 +809,6 @@ local function updatePlayerList()
 			layoutOrder = layoutOrder + 1
 		end
 	end
-	-- Update CanvasSize to accommodate all buttons
 	SearchPlayer.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
 end
 
@@ -915,7 +944,7 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- FLY HANDLING (HD Admin–Style) with Smooth Rotation & Proper Velocity
+-- FLY HANDLING (HD Admin–Style) with Smooth Rotation & Unified Input for PC & Mobile
 ---------------------------
 local bv, bg  -- BodyVelocity and BodyGyro
 local hdFlying = false
@@ -929,6 +958,7 @@ local function startFly_HD()
 
 	hum.PlatformStand = true
 	FlySpeedBox.Visible = true
+	-- Show mobile up/down buttons if on touch
 	if UIS.TouchEnabled then
 		UpButton.Visible = true
 		DownButton.Visible = true
@@ -955,29 +985,34 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
-		if UIS.TouchEnabled then
-			local horizontal = hum.MoveDirection
-			local vertical = 0
-			if mobileUp then vertical = vertical + 1 end
-			if mobileDown then vertical = vertical - 1 end
-			moveDir = Vector3.new(horizontal.X, vertical, horizontal.Z)
-		else
-			-- Camera-local WASD/Space/LeftControl:
-			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
-			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
-			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
+		-- Check for keyboard input (PC style)
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
+
+		-- If no keyboard input and on mobile, fall back to Humanoid.MoveDirection for horizontal
+		if UIS.TouchEnabled and moveDir.Magnitude == 0 then
+			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if h then
+				moveDir = h.MoveDirection
+			end
 		end
+
+		-- Always add vertical input from mobile buttons
+		if mobileUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
+		if mobileDown then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
 		if moveDir.Magnitude > 0 then
 			moveDir = moveDir.Unit
 		end
 
-		local worldMoveDir = workspace.CurrentCamera.CFrame:VectorToWorldSpace(moveDir)
+		local worldMoveDir = cam.CFrame:VectorToWorldSpace(moveDir)
 		bv.Velocity = worldMoveDir * flySpeed
-		bg.CFrame = bg.CFrame:Lerp(workspace.CurrentCamera.CFrame, 0.2)
+
+		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
 	end)
 end
 
@@ -991,11 +1026,11 @@ local function stopFly_HD()
 		end
 	end
 	if bv then
-		bv:Destroy() 
+		bv:Destroy()
 		bv = nil
 	end
 	if bg then
-		bg:Destroy() 
+		bg:Destroy()
 		bg = nil
 	end
 	if UIS.TouchEnabled and oldGravity then
