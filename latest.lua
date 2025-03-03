@@ -37,14 +37,14 @@ local Lighting = game:GetService("Lighting")
 local flyEnabled = false
 local noclipEnabled = false
 local flySpeed = 50
-local oldGravity = nil  -- for mobile gravity restore
+local oldGravity = nil  -- used for mobile
 
--- Mobile vertical control flags
+-- Mobile vertical flags
 local mobileUp = false
 local mobileDown = false
 
 local Page = 1
-local regenConnection = nil  -- for InstantRegen
+local regenConnection = nil  -- for instant regen
 
 local buttonTweenTime = 0.1
 local mainframeTweenTime = 0.25
@@ -663,7 +663,6 @@ NameTagAll.MouseButton1Click:Connect(function()
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
-		-- Loop through every non-local player and apply tag.
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player then
 				if plr.Character then
@@ -688,7 +687,6 @@ NameTagAll.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Also update tags on PlayerAdded/Removing
 game.Players.PlayerAdded:Connect(function(plr)
 	if plr ~= player then
 		plr.CharacterAdded:Connect(function(character)
@@ -956,9 +954,9 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- FLY HANDLER (HD Admin–Style) with PC/ Mobile Unified Input
+-- FLY HANDLER (HD Admin–Style) with Corrected PC Direction & Mobile Up/Down
 ---------------------------
-local bv, bg  -- BodyVelocity and BodyGyro
+local bv, bg
 local hdFlying = false
 
 local function startFly_HD()
@@ -995,22 +993,28 @@ local function startFly_HD()
 		end
 
 		local cam = workspace.CurrentCamera
-		local moveDir = Vector3.new(0,0,0)
-		-- PC keyboard input (invert LookVector so that W moves you in the camera's forward direction)
-		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir - cam.CFrame.LookVector end
-		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + cam.CFrame.LookVector end
+		local moveDir = Vector3.new(0, 0, 0)
+		-- For PC, now W adds forward and S subtracts forward:
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
 		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
 
-		-- On mobile, if there is joystick input, use the Humanoid's MoveDirection.
+		-- On mobile, use the horizontal component of the Humanoid.MoveDirection
 		if UIS.TouchEnabled then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			if h and h.MoveDirection.Magnitude > 0 then
-				moveDir = h.MoveDirection
+			if h then
+				-- Use only horizontal input:
+				local moveHoriz = Vector3.new(h.MoveDirection.X, 0, h.MoveDirection.Z)
+				moveDir = moveHoriz
 			end
 		end
+
+		-- Always add mobile vertical input
+		if mobileUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
+		if mobileDown then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
 		if moveDir.Magnitude > 0 then
 			moveDir = moveDir.Unit
@@ -1031,11 +1035,11 @@ local function stopFly_HD()
 		end
 	end
 	if bv then
-		bv:Destroy()
+		bv:Destroy() 
 		bv = nil
 	end
 	if bg then
-		bg:Destroy()
+		bg:Destroy() 
 		bg = nil
 	end
 	if UIS.TouchEnabled and oldGravity then
