@@ -50,6 +50,16 @@ local buttonTweenTime = 0.1
 local mainframeTweenTime = 0.25
 
 ---------------------------
+-- HELPER: Default Name Label Visibility
+---------------------------
+local function setDefaultNameVisibility(character, visible)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.DisplayDistanceType = visible and Enum.HumanoidDisplayDistanceType.Viewer or Enum.HumanoidDisplayDistanceType.None
+	end
+end
+
+---------------------------
 -- AUTO-RELOAD CHARACTER ON DEATH
 ---------------------------
 player.CharacterAdded:Connect(function(character)
@@ -593,7 +603,7 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- RGB PICKER (Must be created before getNameTagColor)
+-- RGB PICKER (Placed under NameTagAll Button)
 ---------------------------
 local RBox = Instance.new("TextBox")
 RBox.Parent = Cheat3_Frame
@@ -620,13 +630,17 @@ BBox.PlaceholderText = "B"
 Instance.new("UICorner", BBox)
 
 ---------------------------
--- NAME TAG ALL (Every non-local player's Head)
+-- NAME TAG ALL (Custom)
 ---------------------------
 local function getNameTagColor()
-	local r = tonumber(RBox.Text) or 255
-	local g = tonumber(GBox.Text) or 255
-	local b = tonumber(BBox.Text) or 255
-	return Color3.new(r/255, g/255, b/255)
+	if RBox and GBox and BBox then
+		local r = tonumber(RBox.Text) or 255
+		local g = tonumber(GBox.Text) or 255
+		local b = tonumber(BBox.Text) or 255
+		return Color3.new(r/255, g/255, b/255)
+	else
+		return Color3.new(1,1,1)
+	end
 end
 
 local nameTagUpdateConnections = {}
@@ -690,14 +704,17 @@ NameTagAll.MouseButton1Click:Connect(function()
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
+		-- Hide default name labels for non-local players
 		for _, plr in pairs(game.Players:GetPlayers()) do
+			if plr ~= player and plr.Character then
+				setDefaultNameVisibility(plr.Character, false)
+				addNameTag(plr.Character, plr.Name)
+			end
 			if plr ~= player then
-				if plr.Character then
-					addNameTag(plr.Character, plr.Name)
-				end
 				plr.CharacterAdded:Connect(function(character)
 					if nameTagAllEnabled then
 						addNameTag(character, plr.Name)
+						setDefaultNameVisibility(character, false)
 					end
 				end)
 			end
@@ -709,6 +726,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player and plr.Character then
 				removeNameTag(plr.Character)
+				setDefaultNameVisibility(plr.Character, true)
 			end
 		end
 	end
@@ -719,6 +737,9 @@ game.Players.PlayerAdded:Connect(function(plr)
 		plr.CharacterAdded:Connect(function(character)
 			if nameTagAllEnabled then
 				addNameTag(character, plr.Name)
+				setDefaultNameVisibility(character, false)
+			else
+				setDefaultNameVisibility(character, true)
 			end
 		end)
 	end
@@ -996,7 +1017,7 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0,0,0)
-		-- PC: Use camera vectors so that W moves forward
+		-- PC: W moves forward, S backward, A/D sideways.
 		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
@@ -1004,7 +1025,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
 
-		-- On mobile, if there is joystick input, use only its horizontal component.
+		-- On mobile, use only the horizontal component of Humanoid.MoveDirection.
 		if UIS.TouchEnabled then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h and h.MoveDirection.Magnitude > 0 then
@@ -1013,7 +1034,7 @@ local function startFly_HD()
 			end
 		end
 
-		-- Always add mobile vertical input from Up/Down buttons.
+		-- Always add vertical input from mobile Up/Down buttons.
 		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
 
