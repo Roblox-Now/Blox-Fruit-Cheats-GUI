@@ -23,7 +23,7 @@
 -- SETTINGS & VARIABLES
 ---------------------------
 local DevMode = true
-local Menu_Version = "V1.1.1 BETA"
+local Menu_Version = "V1.1.8 BETA"
 local Menu_Name = "Universal GUI"
 local titleText = "Universal GUI"
 
@@ -51,7 +51,7 @@ local buttonTweenTime = 0.1   -- for OpenButton hover/click effects
 local mainframeTweenTime = 0.25
 
 ---------------------------
--- AUTO-RELOAD CHARACTER ON DEATH (Optional)
+-- AUTO-RELOAD CHARACTER ON DEATH
 ---------------------------
 player.CharacterAdded:Connect(function(character)
 	local hum = character:WaitForChild("Humanoid")
@@ -79,10 +79,10 @@ end)
 -- MAIN GUI SETUP
 ---------------------------
 local MainGui = Instance.new("ScreenGui")
-MainGui.Parent = player:FindFirstChildOfClass("PlayerGui")
 MainGui.Name = Menu_Name
+MainGui.Parent = player:FindFirstChildOfClass("PlayerGui")
 
--- OpenButton as ImageButton using provided asset ID
+-- OpenButton
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Name = "OpenButton"
 OpenButton.Parent = MainGui
@@ -93,7 +93,7 @@ Instance.new("UICorner", OpenButton)
 OpenButton.Image = "http://www.roblox.com/asset/?id=104276980467632"
 OpenButton.ImageColor3 = Color3.new(1, 1, 1)
 
--- OpenButton hover/click effects
+-- OpenButton effects
 local normalSize = UDim2.new(0, 50, 0, 50)
 local hoverSize = UDim2.new(0, 45, 0, 45)
 local clickSize = UDim2.new(0, 55, 0, 55)
@@ -104,7 +104,6 @@ OpenButton.MouseEnter:Connect(function()
 	local tween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = hoverSize})
 	tween:Play()
 end)
-
 OpenButton.MouseLeave:Connect(function()
 	isHovering = false
 	local tween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = normalSize})
@@ -230,7 +229,6 @@ makeDraggable(OpenButton)
 -- OPEN/CLOSE MAINFRAME WITH CENTER-BASED TWEEN
 ---------------------------
 OpenButton.MouseButton1Click:Connect(function()
-	-- OpenButton click animation
 	local clickTween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = clickSize})
 	clickTween:Play()
 	clickTween.Completed:Connect(function()
@@ -240,7 +238,6 @@ OpenButton.MouseButton1Click:Connect(function()
 	end)
 
 	if MainFrame.Visible then
-		-- Closing: tween to 0 size at center
 		local tweenClose1 = TweenService:Create(MainFrame, TweenInfo.new(mainframeTweenTime), {Size = UDim2.new(0, 0, 0, 0)})
 		local tweenClose2 = TweenService:Create(MainFrame, TweenInfo.new(mainframeTweenTime), {Position = centerPos})
 		tweenClose1:Play()
@@ -251,7 +248,6 @@ OpenButton.MouseButton1Click:Connect(function()
 			MainFrame.Position = originalPos
 		end)
 	else
-		-- Opening: start at center with 0 size then tween to layout
 		MainFrame.Position = centerPos
 		MainFrame.Size = UDim2.new(0, 0, 0, 0)
 		MainFrame.Visible = true
@@ -536,6 +532,7 @@ MT.Name = "MT"
 MT.PlaceholderText = "Map Transparency"
 Instance.new("UICorner", MT)
 
+-- Fly Toggle
 local Fly = Instance.new("TextButton")
 Fly.Parent = Cheat3_Frame
 Fly.Position = UDim2.new(0.375, 0, 0.42, 0)
@@ -547,6 +544,7 @@ Fly.Text = "Fly: Off"
 Fly.Name = "Fly"
 Instance.new("UICorner", Fly)
 
+-- Noclip Toggle
 local Noclip = Instance.new("TextButton")
 Noclip.Parent = Cheat3_Frame
 Noclip.Position = UDim2.new(0.675, 0, 0.42, 0)
@@ -558,6 +556,7 @@ Noclip.Text = "Noclip: Off"
 Noclip.Name = "Noclip"
 Instance.new("UICorner", Noclip)
 
+-- Highlight All Toggle
 local HighlightAll = Instance.new("TextButton")
 HighlightAll.Parent = Cheat3_Frame
 HighlightAll.Position = UDim2.new(0.675, 0, 0.58, 0)
@@ -570,6 +569,7 @@ HighlightAll.Name = "HighlightAll"
 Instance.new("UICorner", HighlightAll)
 HighlightAll.ZIndex = 2
 
+-- InstantRegen Toggle
 local InstantRegen = Instance.new("TextButton")
 InstantRegen.Parent = Cheat3_Frame
 InstantRegen.Position = UDim2.new(0.375, 0, 0.58, 0)
@@ -582,6 +582,7 @@ InstantRegen.Name = "InstantRegen"
 Instance.new("UICorner", InstantRegen)
 InstantRegen.ZIndex = 2
 
+-- RefreshCharacter Button
 local RefreshCharacter = Instance.new("TextButton")
 RefreshCharacter.Parent = MainFrame
 RefreshCharacter.Position = UDim2.new(0.25, 0, -0.094, 0)
@@ -601,11 +602,40 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL
+-- NAME TAG ALL (with helper functions)
 ---------------------------
-local nameTagAllEnabled = false
-local nameTagUpdateConnection = nil
+local function getNameTagColor()
+	return Color3.new(1,1,1)  -- modify if you add RGB inputs
+end
 
+local function addNameTag(character, playerName)
+	if character and not character:FindFirstChild("NameTag") then
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "NameTag"
+		billboard.Adornee = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
+		billboard.Parent = character
+		billboard.Size = UDim2.new(0, 200, 0, 50)
+		billboard.StudsOffset = Vector3.new(0, 3, 0)
+		billboard.AlwaysOnTop = true
+
+		local textLabel = Instance.new("TextLabel", billboard)
+		textLabel.Size = UDim2.new(1, 0, 1, 0)
+		textLabel.BackgroundTransparency = 1
+		textLabel.Text = playerName
+		textLabel.TextColor3 = getNameTagColor()
+		textLabel.TextScaled = true
+		textLabel.Font = Enum.Font.FredokaOne
+	end
+end
+
+local function removeNameTag(character)
+	local tag = character:FindFirstChild("NameTag")
+	if tag then
+		tag:Destroy()
+	end
+end
+
+local nameTagAllEnabled = false
 local NameTagAll = Instance.new("TextButton")
 NameTagAll.Parent = Cheat3_Frame
 NameTagAll.Position = UDim2.new(0.675, 0, 0.70, 0)
@@ -618,6 +648,36 @@ NameTagAll.Name = "NameTagAll"
 Instance.new("UICorner", NameTagAll)
 NameTagAll.ZIndex = 2
 
+NameTagAll.MouseButton1Click:Connect(function()
+	if not nameTagAllEnabled then
+		nameTagAllEnabled = true
+		NameTagAll.Text = "NameTag All: On"
+		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
+		for _, plr in pairs(game.Players:GetPlayers()) do
+			if plr ~= player then
+				if plr.Character then
+					addNameTag(plr.Character, plr.Name)
+				end
+				plr.CharacterAdded:Connect(function(character)
+					addNameTag(character, plr.Name)
+				end)
+			end
+		end
+	else
+		nameTagAllEnabled = false
+		NameTagAll.Text = "NameTag All: Off"
+		NameTagAll.BackgroundColor3 = Color3.new(1,0,0)
+		for _, plr in pairs(game.Players:GetPlayers()) do
+			if plr.Character then
+				removeNameTag(plr.Character)
+			end
+		end
+	end
+end)
+
+---------------------------
+-- FULLBRIGHT TOGGLE
+---------------------------
 local FullBright = Instance.new("TextButton")
 FullBright.Parent = Cheat3_Frame
 FullBright.Position = UDim2.new(0.375, 0, 0.74, 0)
@@ -634,14 +694,12 @@ FullBright.MouseButton1Click:Connect(function()
 	if FullBright.Text == "FullBright: Off" then
 		FullBright.Text = "FullBright: On"
 		FullBright.BackgroundColor3 = Color3.new(0, 1, 0)
-		-- Set full bright lighting
 		Lighting.Ambient = Color3.new(1,1,1)
 		Lighting.Brightness = 2
 		Lighting.ClockTime = 12
 	else
 		FullBright.Text = "FullBright: Off"
 		FullBright.BackgroundColor3 = Color3.new(1, 0, 0)
-		-- Restore default lighting (adjust as needed)
 		Lighting.Ambient = Color3.new(0,0,0)
 		Lighting.Brightness = 1
 		Lighting.ClockTime = 14
@@ -649,7 +707,7 @@ FullBright.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- SEARCH PLAYER / TELEPORT TO PLAYER
+-- SEARCH PLAYER / TELEPORT
 ---------------------------
 local SearchPlayer = Instance.new("ScrollingFrame")
 SearchPlayer.Parent = Cheat1_Frame
@@ -658,16 +716,49 @@ SearchPlayer.Size = UDim2.new(0, 100, 0, 85)
 SearchPlayer.BackgroundColor3 = Color3.new(1, 0, 0)
 SearchPlayer.Name = "SearchPlayer"
 SearchPlayer.ZIndex = 2
-SearchPlayer.CanvasSize = UDim2.new(0, 0, 0, 0) -- Optional: Adjust dynamically if needed
+SearchPlayer.CanvasSize = UDim2.new(0, 0, 0, 0)
 
--- Automatically arrange buttons vertically
 local listLayout = Instance.new("UIListLayout", SearchPlayer)
 listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 5)
 
--- Create a refresh button that always stays at the top
+local function updatePlayerList()
+	for _, child in ipairs(SearchPlayer:GetChildren()) do
+		if child:IsA("TextButton") and child.Name ~= "Refresh" then
+			child:Destroy()
+		end
+	end
+
+	local players = game.Players:GetPlayers()
+	table.sort(players, function(a, b)
+		return a.Name < b.Name
+	end)
+
+	for i, plr in ipairs(players) do
+		if plr ~= player then
+			local targetPlayer = plr
+			local tpButton = Instance.new("TextButton")
+			tpButton.Parent = SearchPlayer
+			tpButton.Size = UDim2.new(1, 0, 0, 15)
+			tpButton.LayoutOrder = i
+			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
+			tpButton.TextScaled = true
+			tpButton.Font = Enum.Font.FredokaOne
+			tpButton.Text = targetPlayer.Name
+			tpButton.ZIndex = 2
+			Instance.new("UICorner", tpButton)
+			tpButton.Activated:Connect(function()
+				if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+					player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
+				end
+			end)
+		end
+	end
+end
+
 local refreshButton = Instance.new("TextButton")
+refreshButton.Name = "Refresh"
 refreshButton.Parent = SearchPlayer
 refreshButton.Size = UDim2.new(1, 0, 0, 20)
 refreshButton.Text = "Refresh"
@@ -676,59 +767,13 @@ refreshButton.Font = Enum.Font.FredokaOne
 refreshButton.TextScaled = true
 refreshButton.LayoutOrder = 0
 Instance.new("UICorner", refreshButton)
+refreshButton.MouseButton1Click:Connect(function()
+	updatePlayerList()
+end)
 
-local function updatePlayerList()
-	-- Clear old player buttons (except the refresh button)
-	for _, child in ipairs(SearchPlayer:GetChildren()) do
-		if child:IsA("TextButton") and child ~= refreshButton then
-			child:Destroy()
-		end
-	end
-
-	-- Get and sort players alphabetically
-	local players = game.Players:GetPlayers()
-	table.sort(players, function(a, b)
-		return a.Name < b.Name
-	end)
-
-	-- Create a button for each player (except the local player)
-	for i, plr in ipairs(players) do
-		if plr ~= player then
-			-- Capture the player reference in a local variable
-			local targetPlayer = plr
-			local tpButton = Instance.new("TextButton")
-			tpButton.Parent = SearchPlayer
-			tpButton.Size = UDim2.new(1, 0, 0, 15)
-			tpButton.LayoutOrder = i  -- Keeps buttons ordered properly
-			tpButton.BackgroundColor3 = Color3.fromRGB(255, 155, 0)
-			tpButton.TextScaled = true
-			tpButton.Font = Enum.Font.FredokaOne
-			tpButton.Text = targetPlayer.Name
-			tpButton.ZIndex = 2
-			Instance.new("UICorner", tpButton)
-
-			-- Fix event binding: Use Activated for mobile compatibility
-			tpButton.Activated:Connect(function()
-				if player.Character 
-					and player.Character:FindFirstChild("HumanoidRootPart") 
-					and targetPlayer.Character 
-					and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-					player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
-				end
-			end)
-		end
-	end
-end
-
--- Refresh button updates the list when clicked
-refreshButton.MouseButton1Click:Connect(updatePlayerList)
-
--- Initial update
 updatePlayerList()
-
--- Update the list automatically when players join or leave
-game.Players.PlayerAdded:Connect(updatePlayerList)
-game.Players.PlayerRemoving:Connect(updatePlayerList)
+game.Players.PlayerAdded:Connect(function() updatePlayerList() end)
+game.Players.PlayerRemoving:Connect(function() updatePlayerList() end)
 
 ---------------------------
 -- FPS LABEL
@@ -833,7 +878,34 @@ DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
 DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
 
 ---------------------------
--- FLY HANDLING (HD Admin–Style)
+-- ExecuteButton3 (Map Transparency) - Skip players
+---------------------------
+local ExecuteButton3 = Instance.new("TextButton")
+ExecuteButton3.Parent = Cheat3_Frame
+ExecuteButton3.Position = UDim2.new(0.087, 0, 0.58, 0)
+ExecuteButton3.Size = UDim2.new(0, 100, 0, 25)
+ExecuteButton3.BackgroundColor3 = Color3.new(1, 0.607843, 0)
+ExecuteButton3.TextScaled = true
+ExecuteButton3.Font = Enum.Font.FredokaOne
+ExecuteButton3.Name = "ExecuteButton3"
+ExecuteButton3.Text = "Execute"
+Instance.new("UICorner", ExecuteButton3)
+ExecuteButton3.ZIndex = 2
+
+ExecuteButton3.MouseButton1Click:Connect(function()
+	local tVal = tonumber(MT.Text) or 0
+	for _, obj in pairs(workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local modelAncestor = obj:FindFirstAncestorOfClass("Model")
+			if not (modelAncestor and modelAncestor:FindFirstChildOfClass("Humanoid")) then
+				obj.Transparency = tVal
+			end
+		end
+	end
+end)
+
+---------------------------
+-- FLY HANDLING (HD Admin–Style) with Smooth Rotation & Proper Velocity
 ---------------------------
 local bv, bg  -- BodyVelocity and BodyGyro
 local hdFlying = false
@@ -860,6 +932,8 @@ local function startFly_HD()
 
 	bg = Instance.new("BodyGyro", hrp)
 	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+	bg.P = 10000
+	-- Initialize the gyro to the camera's current CFrame
 	bg.CFrame = workspace.CurrentCamera.CFrame
 
 	hdFlying = true
@@ -879,19 +953,25 @@ local function startFly_HD()
 			if mobileDown then vertical = vertical - 1 end
 			moveDir = Vector3.new(horizontal.X, vertical, horizontal.Z)
 		else
-			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+			-- Use WASD in local camera space:
+			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
 			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
 		end
 
 		if moveDir.Magnitude > 0 then
 			moveDir = moveDir.Unit
 		end
-		bv.Velocity = moveDir * flySpeed
-		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.1)
+
+		-- Convert local moveDir (in camera space) to world space:
+		local worldMoveDir = cam.CFrame:VectorToWorldSpace(moveDir)
+		bv.Velocity = worldMoveDir * flySpeed
+
+		-- Smoothly interpolate the gyro's CFrame toward the camera's CFrame for smooth rotation
+		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
 	end)
 end
 
@@ -905,11 +985,11 @@ local function stopFly_HD()
 		end
 	end
 	if bv then
-		bv:Destroy() 
+		bv:Destroy()
 		bv = nil
 	end
 	if bg then
-		bg:Destroy() 
+		bg:Destroy()
 		bg = nil
 	end
 	if UIS.TouchEnabled and oldGravity then
@@ -1009,56 +1089,7 @@ InstantRegen.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- UPDATE CHEAT PAGE DISPLAY
+-- INITIALIZE
 ---------------------------
 updateCheatPages()
-
----------------------------
--- FPS LABEL
----------------------------
-local FPSLabel = Instance.new("TextLabel")
-FPSLabel.Parent = MainGui
-FPSLabel.Position = UDim2.new(0.103, 0, 0.057, 0)
-FPSLabel.Size = UDim2.new(0, 100, 0, 25)
-FPSLabel.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-FPSLabel.TextScaled = true
-FPSLabel.Font = Enum.Font.FredokaOne
-FPSLabel.Text = "FPS: Calculating..."
-FPSLabel.Name = "FPSLabel"
-Instance.new("UICorner", FPSLabel)
-FPSLabel.ZIndex = 2
-
-local lastUpdate = tick()
-local frameCount = 0
-RunService.RenderStepped:Connect(function()
-	frameCount = frameCount + 1
-	local now = tick()
-	if now - lastUpdate >= 1 then
-		FPSLabel.Text = "FPS: " .. math.floor(frameCount / (now - lastUpdate))
-		frameCount = 0
-		lastUpdate = now
-	end
-end)
-
----------------------------
--- POSITION LABEL
----------------------------
-local PositionLabel = Instance.new("TextLabel")
-PositionLabel.Parent = MainGui
-PositionLabel.Position = UDim2.new(0.214, 0, 0.057, 0)
-PositionLabel.Size = UDim2.new(0, 100, 0, 25)
-PositionLabel.BackgroundColor3 = Color3.new(1, 0.607843, 0)
-PositionLabel.TextScaled = true
-PositionLabel.Font = Enum.Font.FredokaOne
-PositionLabel.Name = "PositionLabel"
-Instance.new("UICorner", PositionLabel)
-PositionLabel.ZIndex = 2
-
-RunService.RenderStepped:Connect(function()
-	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if hrp then
-		PositionLabel.Text = string.format("X: %.2f Y: %.2f Z: %.2f", hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
-	end
-end)
-
 print("Universal GUI Loaded Successfully")
