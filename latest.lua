@@ -597,10 +597,10 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (with distance display and custom RGB color)
+-- NAME TAG ALL (applied to every player’s head, live updating)
 ---------------------------
 local function getNameTagColor()
-	-- Read RGB values (0-255) and normalize.
+	-- Convert 0-255 values to Color3
 	local r = tonumber(RBox.Text) or 255
 	local g = tonumber(GBox.Text) or 255
 	local b = tonumber(BBox.Text) or 255
@@ -613,7 +613,7 @@ local function addNameTag(character, playerName)
 	local head = character:FindFirstChild("Head")
 	if not head then return end
 
-	-- Remove any existing tag and add new one.
+	-- Remove any existing tag
 	removeNameTag(character)
 	
 	local billboard = Instance.new("BillboardGui")
@@ -665,19 +665,21 @@ NameTagAll.Name = "NameTagAll"
 Instance.new("UICorner", NameTagAll)
 NameTagAll.ZIndex = 2
 
+-- When toggled, apply tag to every non-local player's head and connect CharacterAdded events.
 NameTagAll.MouseButton1Click:Connect(function()
 	if not nameTagAllEnabled then
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
-		-- Apply name tag to every non-local player's head.
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player then
 				if plr.Character then
 					addNameTag(plr.Character, plr.Name)
 				end
 				plr.CharacterAdded:Connect(function(character)
-					addNameTag(character, plr.Name)
+					if nameTagAllEnabled then
+						addNameTag(character, plr.Name)
+					end
 				end)
 			end
 		end
@@ -693,7 +695,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 	end
 end)
 
--- RGB Picker Under NameTagAll Button (spaced out)
+-- RGB Picker Under NameTagAll Button (spread out)
 local RBox = Instance.new("TextBox")
 RBox.Parent = Cheat3_Frame
 RBox.Size = UDim2.new(0, 50, 0, 25)
@@ -706,7 +708,7 @@ local GBox = Instance.new("TextBox")
 GBox.Parent = Cheat3_Frame
 GBox.Size = UDim2.new(0, 50, 0, 25)
 GBox.Position = UDim2.new(0.72, 0, 0.80, 0)
-GBox.Text = "0"
+GBox.Text = "255"
 GBox.PlaceholderText = "G"
 Instance.new("UICorner", GBox)
 
@@ -714,7 +716,7 @@ local BBox = Instance.new("TextBox")
 BBox.Parent = Cheat3_Frame
 BBox.Size = UDim2.new(0, 50, 0, 25)
 BBox.Position = UDim2.new(0.79, 0, 0.80, 0)
-BBox.Text = "0"
+BBox.Text = "255"
 BBox.PlaceholderText = "B"
 Instance.new("UICorner", BBox)
 
@@ -771,7 +773,6 @@ local searchButtons = {}  -- key: player.UserId, value: the TextButton
 local function updatePlayerList()
 	local players = game.Players:GetPlayers()
 	table.sort(players, function(a, b) return a.Name < b.Name end)
-	-- Remove buttons for players no longer present
 	for userId, btn in pairs(searchButtons) do
 		local found = false
 		for _, plr in ipairs(players) do
@@ -785,7 +786,6 @@ local function updatePlayerList()
 			searchButtons[userId] = nil
 		end
 	end
-	-- Add/update buttons for current players
 	local layoutOrder = 1
 	for _, plr in ipairs(players) do
 		if plr ~= player then
@@ -975,7 +975,6 @@ local function startFly_HD()
 	bg = Instance.new("BodyGyro", hrp)
 	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
 	bg.P = 10000
-	-- Initialize with the current camera CFrame
 	bg.CFrame = workspace.CurrentCamera.CFrame
 
 	hdFlying = true
@@ -988,35 +987,28 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
-		-- PC keyboard input:
-		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
-		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
-		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
-		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
-		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
+		-- Use keyboard input for PC:
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
 
-		-- If on mobile and no keyboard input, fallback to Humanoid.MoveDirection:
+		-- For mobile, if no keyboard input, default to forward direction.
 		if UIS.TouchEnabled and moveDir.Magnitude == 0 then
-			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			if h then
-				moveDir = h.MoveDirection
-			end
+			moveDir = cam.CFrame.LookVector
 		end
 
 		-- Always add mobile vertical input:
-		if mobileUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
-		if mobileDown then moveDir = moveDir + Vector3.new(0, -1, 0) end
+		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
+		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
 
-		-- Instead of using cam.CFrame:VectorToWorldSpace, build the world move direction manually:
-		local camCFrame = cam.CFrame
-		local worldMoveDir = (camCFrame.RightVector * moveDir.X) + (Vector3.new(0,1,0) * moveDir.Y) + (camCFrame.LookVector * moveDir.Z)
-		
-		if worldMoveDir.Magnitude > 0 then
-			worldMoveDir = worldMoveDir.Unit
+		if moveDir.Magnitude > 0 then
+			moveDir = moveDir.Unit
 		end
-		
-		bv.Velocity = worldMoveDir * flySpeed
+
+		bv.Velocity = moveDir * flySpeed
 		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
 	end)
 end
@@ -1031,11 +1023,11 @@ local function stopFly_HD()
 		end
 	end
 	if bv then
-		bv:Destroy()
+		bv:Destroy() 
 		bv = nil
 	end
 	if bg then
-		bg:Destroy()
+		bg:Destroy() 
 		bg = nil
 	end
 	if UIS.TouchEnabled and oldGravity then
