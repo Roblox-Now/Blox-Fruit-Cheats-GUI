@@ -600,7 +600,7 @@ end)
 -- NAME TAG ALL (with distance display and custom RGB color)
 ---------------------------
 local function getNameTagColor()
-	-- Read RGB values from textboxes in 0-255 range and normalize them.
+	-- Read RGB values (0-255) and normalize.
 	local r = tonumber(RBox.Text) or 255
 	local g = tonumber(GBox.Text) or 255
 	local b = tonumber(BBox.Text) or 255
@@ -614,31 +614,32 @@ local function addNameTag(character, playerName)
 	local head = character:FindFirstChild("Head")
 	if not head then return end
 
-	if not character:FindFirstChild("NameTag") then
-		local billboard = Instance.new("BillboardGui")
-		billboard.Name = "NameTag"
-		billboard.Adornee = head
-		billboard.Parent = character
-		billboard.Size = UDim2.new(0, 120, 0, 25)
-		billboard.StudsOffset = Vector3.new(0, 2, 0)
-		billboard.AlwaysOnTop = true
-		billboard.Enabled = true
+	-- Always remove any previous tag and add a fresh one.
+	removeNameTag(character)
+	
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "NameTag"
+	billboard.Adornee = head
+	billboard.Parent = character
+	billboard.Size = UDim2.new(0, 120, 0, 25)
+	billboard.StudsOffset = Vector3.new(0, 2, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Enabled = true
 
-		local textLabel = Instance.new("TextLabel", billboard)
-		textLabel.Size = UDim2.new(1, 0, 1, 0)
-		textLabel.BackgroundTransparency = 1
+	local textLabel = Instance.new("TextLabel", billboard)
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextColor3 = getNameTagColor()
+	textLabel.TextScaled = true
+	textLabel.Font = Enum.Font.FredokaOne
+
+	local conn = RunService.RenderStepped:Connect(function()
+		local localHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local dist = localHRP and math.floor((head.Position - localHRP.Position).Magnitude) or 0
+		textLabel.Text = playerName .. " [" .. dist .. " Studs Away]"
 		textLabel.TextColor3 = getNameTagColor()
-		textLabel.TextScaled = true
-		textLabel.Font = Enum.Font.FredokaOne
-
-		local conn = RunService.RenderStepped:Connect(function()
-			local localHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-			local dist = localHRP and math.floor((head.Position - localHRP.Position).Magnitude) or 0
-			textLabel.Text = playerName .. " [" .. dist .. " Studs Away]"
-			textLabel.TextColor3 = getNameTagColor()
-		end)
-		nameTagUpdateConnections[billboard] = conn
-	end
+	end)
+	nameTagUpdateConnections[billboard] = conn
 end
 
 local function removeNameTag(character)
@@ -670,6 +671,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
+		-- For every non-local player, apply the name tag
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player then
 				if plr.Character then
@@ -685,7 +687,7 @@ NameTagAll.MouseButton1Click:Connect(function()
 		NameTagAll.Text = "NameTag All: Off"
 		NameTagAll.BackgroundColor3 = Color3.new(1,0,0)
 		for _, plr in pairs(game.Players:GetPlayers()) do
-			if plr.Character then
+			if plr ~= player and plr.Character then
 				removeNameTag(plr.Character)
 			end
 		end
@@ -986,7 +988,7 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
-		-- Use keyboard input for PC:
+		-- PC keyboard input:
 		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
@@ -994,7 +996,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
-		-- If on mobile and no keyboard input, fall back to character's MoveDirection:
+		-- If on mobile and no keyboard input, fallback to Humanoid.MoveDirection
 		if UIS.TouchEnabled and moveDir.Magnitude == 0 then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h then
@@ -1002,7 +1004,7 @@ local function startFly_HD()
 			end
 		end
 
-		-- Always add vertical mobile input:
+		-- Always add mobile vertical input
 		if mobileUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
@@ -1012,7 +1014,6 @@ local function startFly_HD()
 
 		local worldMoveDir = cam.CFrame:VectorToWorldSpace(moveDir)
 		bv.Velocity = worldMoveDir * flySpeed
-
 		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
 	end)
 end
@@ -1027,11 +1028,11 @@ local function stopFly_HD()
 		end
 	end
 	if bv then
-		bv:Destroy() 
+		bv:Destroy()
 		bv = nil
 	end
 	if bg then
-		bg:Destroy() 
+		bg:Destroy()
 		bg = nil
 	end
 	if UIS.TouchEnabled and oldGravity then
