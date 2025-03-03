@@ -23,7 +23,7 @@
 -- SETTINGS & VARIABLES
 ---------------------------
 local DevMode = true
-local Menu_Version = "V1.1.8 BETA"
+local Menu_Version = "V1.1.1 BETA"
 local Menu_Name = "Universal GUI"
 local titleText = "Universal GUI"
 
@@ -226,7 +226,7 @@ makeDraggable(MainFrame)
 makeDraggable(OpenButton)
 
 ---------------------------
--- OPEN/CLOSE MAINFRAME WITH CENTER-BASED TWEEN
+-- OPEN/CLOSE MAINFRAME
 ---------------------------
 OpenButton.MouseButton1Click:Connect(function()
 	local clickTween = TweenService:Create(OpenButton, TweenInfo.new(buttonTweenTime), {Size = clickSize})
@@ -602,16 +602,17 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (with helper functions)
+-- NAME TAG ALL (with distance updating)
 ---------------------------
 local function getNameTagColor()
-	return Color3.new(1,1,1)  -- modify if you add RGB inputs
+	return Color3.new(1,1,1)  -- modify if you add RGB inputs later
 end
 
 local function addNameTag(character, playerName)
 	if character and not character:FindFirstChild("NameTag") then
 		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "NameTag"
+		-- Use the head if available; otherwise, use the HumanoidRootPart
 		billboard.Adornee = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
 		billboard.Parent = character
 		billboard.Size = UDim2.new(0, 200, 0, 50)
@@ -621,10 +622,28 @@ local function addNameTag(character, playerName)
 		local textLabel = Instance.new("TextLabel", billboard)
 		textLabel.Size = UDim2.new(1, 0, 1, 0)
 		textLabel.BackgroundTransparency = 1
-		textLabel.Text = playerName
 		textLabel.TextColor3 = getNameTagColor()
 		textLabel.TextScaled = true
 		textLabel.Font = Enum.Font.FredokaOne
+
+		-- Auto-update the tag every frame with distance from local player's HRP
+		local updateConn
+		updateConn = RunService.RenderStepped:Connect(function()
+			if not billboard.Parent then
+				updateConn:Disconnect()
+				return
+			end
+			local localChar = player.Character
+			if localChar and localChar:FindFirstChild("HumanoidRootPart") and character then
+				local localHRP = localChar:FindFirstChild("HumanoidRootPart")
+				-- Use the part the billboard is adorning (Head or HumanoidRootPart) as target
+				local targetPart = billboard.Adornee
+				if localHRP and targetPart then
+					local distance = (localHRP.Position - targetPart.Position).Magnitude
+					textLabel.Text = playerName .. " [" .. math.floor(distance) .. " Studs Away]"
+				end
+			end
+		end)
 	end
 end
 
@@ -707,7 +726,7 @@ FullBright.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- SEARCH PLAYER / TELEPORT
+-- SEARCH PLAYER / TELEPORT (Auto-updating every frame)
 ---------------------------
 local SearchPlayer = Instance.new("ScrollingFrame")
 SearchPlayer.Parent = Cheat1_Frame
@@ -718,10 +737,10 @@ SearchPlayer.Name = "SearchPlayer"
 SearchPlayer.ZIndex = 2
 SearchPlayer.CanvasSize = UDim2.new(0, 0, 0, 0)
 
-local listLayout = Instance.new("UIListLayout", SearchPlayer)
-listLayout.FillDirection = Enum.FillDirection.Vertical
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.Padding = UDim.new(0, 5)
+local spListLayout = Instance.new("UIListLayout", SearchPlayer)
+spListLayout.FillDirection = Enum.FillDirection.Vertical
+spListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+spListLayout.Padding = UDim.new(0, 5)
 
 local function updatePlayerList()
 	for _, child in ipairs(SearchPlayer:GetChildren()) do
@@ -757,6 +776,7 @@ local function updatePlayerList()
 	end
 end
 
+-- Create a refresh button (optional; auto-update below still refreshes every frame)
 local refreshButton = Instance.new("TextButton")
 refreshButton.Name = "Refresh"
 refreshButton.Parent = SearchPlayer
@@ -765,15 +785,16 @@ refreshButton.Text = "Refresh"
 refreshButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 refreshButton.Font = Enum.Font.FredokaOne
 refreshButton.TextScaled = true
-refreshButton.LayoutOrder = 0
+	refreshButton.LayoutOrder = 0
 Instance.new("UICorner", refreshButton)
 refreshButton.MouseButton1Click:Connect(function()
 	updatePlayerList()
 end)
 
-updatePlayerList()
-game.Players.PlayerAdded:Connect(function() updatePlayerList() end)
-game.Players.PlayerRemoving:Connect(function() updatePlayerList() end)
+-- Auto-update SearchPlayer every frame
+RunService.RenderStepped:Connect(function()
+	updatePlayerList()
+end)
 
 ---------------------------
 -- FPS LABEL
@@ -933,7 +954,7 @@ local function startFly_HD()
 	bg = Instance.new("BodyGyro", hrp)
 	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
 	bg.P = 10000
-	-- Initialize the gyro to the camera's current CFrame
+	-- Start gyro at the current camera orientation
 	bg.CFrame = workspace.CurrentCamera.CFrame
 
 	hdFlying = true
@@ -953,7 +974,7 @@ local function startFly_HD()
 			if mobileDown then vertical = vertical - 1 end
 			moveDir = Vector3.new(horizontal.X, vertical, horizontal.Z)
 		else
-			-- Use WASD in local camera space:
+			-- Using WASD keys relative to the camera's local space
 			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
 			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
 			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
@@ -966,11 +987,11 @@ local function startFly_HD()
 			moveDir = moveDir.Unit
 		end
 
-		-- Convert local moveDir (in camera space) to world space:
+		-- Convert the local move direction (camera space) into world space
 		local worldMoveDir = cam.CFrame:VectorToWorldSpace(moveDir)
 		bv.Velocity = worldMoveDir * flySpeed
 
-		-- Smoothly interpolate the gyro's CFrame toward the camera's CFrame for smooth rotation
+		-- Smoothly rotate the character toward the camera using Lerp (0.2 factor)
 		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
 	end)
 end
