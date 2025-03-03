@@ -597,30 +597,32 @@ RefreshCharacter.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- NAME TAG ALL (with distance display and RGB Picker)
+-- NAME TAG ALL (with distance display and custom RGB color)
 ---------------------------
 local function getNameTagColor()
-	local r = tonumber(RBox.Text) or 1
-	local g = tonumber(GBox.Text) or 1
-	local b = tonumber(BBox.Text) or 1
-	return Color3.new(r, g, b)
+	-- Read RGB values from textboxes in 0-255 range and normalize them.
+	local r = tonumber(RBox.Text) or 255
+	local g = tonumber(GBox.Text) or 255
+	local b = tonumber(BBox.Text) or 255
+	return Color3.new(r/255, g/255, b/255)
 end
 
 local nameTagUpdateConnections = {}
 
 local function addNameTag(character, playerName)
-	if character and not character:FindFirstChild("NameTag") then
-		local adornee = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
-		if not adornee then return end
+	-- Force attach only if there's a "Head"
+	local head = character:FindFirstChild("Head")
+	if not head then return end
 
+	if not character:FindFirstChild("NameTag") then
 		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "NameTag"
-		billboard.Adornee = adornee
+		billboard.Adornee = head
 		billboard.Parent = character
-		billboard.Size = UDim2.new(0, 200, 0, 50)
-		billboard.StudsOffset = Vector3.new(0, 3, 0)
+		billboard.Size = UDim2.new(0, 120, 0, 25)
+		billboard.StudsOffset = Vector3.new(0, 2, 0)
 		billboard.AlwaysOnTop = true
-		billboard.Enabled = true  -- ensure it's enabled
+		billboard.Enabled = true
 
 		local textLabel = Instance.new("TextLabel", billboard)
 		textLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -631,7 +633,7 @@ local function addNameTag(character, playerName)
 
 		local conn = RunService.RenderStepped:Connect(function()
 			local localHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-			local dist = localHRP and math.floor((adornee.Position - localHRP.Position).Magnitude) or 0
+			local dist = localHRP and math.floor((head.Position - localHRP.Position).Magnitude) or 0
 			textLabel.Text = playerName .. " [" .. dist .. " Studs Away]"
 			textLabel.TextColor3 = getNameTagColor()
 		end)
@@ -695,7 +697,7 @@ local RBox = Instance.new("TextBox")
 RBox.Parent = Cheat3_Frame
 RBox.Size = UDim2.new(0, 40, 0, 25)
 RBox.Position = UDim2.new(0.675, 0, 0.80, 0)
-RBox.Text = "1"
+RBox.Text = "255"
 RBox.PlaceholderText = "R"
 Instance.new("UICorner", RBox)
 
@@ -703,7 +705,7 @@ local GBox = Instance.new("TextBox")
 GBox.Parent = Cheat3_Frame
 GBox.Size = UDim2.new(0, 40, 0, 25)
 GBox.Position = UDim2.new(0.725, 0, 0.80, 0)
-GBox.Text = "1"
+GBox.Text = "255"
 GBox.PlaceholderText = "G"
 Instance.new("UICorner", GBox)
 
@@ -711,7 +713,7 @@ local BBox = Instance.new("TextBox")
 BBox.Parent = Cheat3_Frame
 BBox.Size = UDim2.new(0, 40, 0, 25)
 BBox.Position = UDim2.new(0.775, 0, 0.80, 0)
-BBox.Text = "1"
+BBox.Text = "255"
 BBox.PlaceholderText = "B"
 Instance.new("UICorner", BBox)
 
@@ -944,7 +946,7 @@ ExecuteButton3.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------
--- FLY HANDLING (HD Admin–Style) with Smooth Rotation & Unified Input for PC & Mobile
+-- FLY HANDLING (HD Admin–Style) with Smooth Rotation & Unified Input
 ---------------------------
 local bv, bg  -- BodyVelocity and BodyGyro
 local hdFlying = false
@@ -958,7 +960,6 @@ local function startFly_HD()
 
 	hum.PlatformStand = true
 	FlySpeedBox.Visible = true
-	-- Show mobile up/down buttons if touch is enabled
 	if UIS.TouchEnabled then
 		UpButton.Visible = true
 		DownButton.Visible = true
@@ -985,7 +986,7 @@ local function startFly_HD()
 
 		local cam = workspace.CurrentCamera
 		local moveDir = Vector3.new(0, 0, 0)
-		-- Use keyboard input for PC
+		-- Use keyboard input for PC:
 		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
@@ -993,7 +994,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
-		-- If no keyboard input and on mobile, use the character's MoveDirection
+		-- If on mobile and no keyboard input, fall back to character's MoveDirection:
 		if UIS.TouchEnabled and moveDir.Magnitude == 0 then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h then
@@ -1001,7 +1002,7 @@ local function startFly_HD()
 			end
 		end
 
-		-- Always add mobile vertical input
+		-- Always add vertical mobile input:
 		if mobileUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0, -1, 0) end
 
@@ -1026,11 +1027,11 @@ local function stopFly_HD()
 		end
 	end
 	if bv then
-		bv:Destroy()
+		bv:Destroy() 
 		bv = nil
 	end
 	if bg then
-		bg:Destroy()
+		bg:Destroy() 
 		bg = nil
 	end
 	if UIS.TouchEnabled and oldGravity then
