@@ -23,7 +23,7 @@
 -- SETTINGS & VARIABLES
 ---------------------------
 local DevMode = true
-local Menu_Version = "V1.1.1 BETA"
+local Menu_Version = "V1.1.3 BETA"
 local Menu_Name = "Universal GUI"
 local titleText = "Universal GUI"
 
@@ -77,14 +77,12 @@ end)
 local function enableNoclip()
 	local character = player.Character
 	if not character then return end
-	-- Disable collisions and make parts massless (to avoid being pushed)
 	for _, part in ipairs(character:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.CanCollide = false
 			part.Massless = true
 		end
 	end
-	-- Use Heartbeat to constantly enforce noclip on every BasePart
 	spawn(function()
 		while noclipEnabled and character.Parent do
 			for _, part in ipairs(character:GetDescendants()) do
@@ -109,8 +107,6 @@ local function disableNoclip()
 	end
 end
 
--- Remove the old noclip RenderStepped loop below and use the new toggle.
--- (This button now toggles our stronger noclip)
 ---------------------------
 -- MAIN GUI SETUP
 ---------------------------
@@ -731,7 +727,6 @@ NameTagAll.MouseButton1Click:Connect(function()
 		nameTagAllEnabled = true
 		NameTagAll.Text = "NameTag All: On"
 		NameTagAll.BackgroundColor3 = Color3.new(0,1,0)
-		-- Hide default name labels and apply custom tags.
 		for _, plr in pairs(game.Players:GetPlayers()) do
 			if plr ~= player and plr.Character then
 				setDefaultNameVisibility(plr.Character, false)
@@ -778,8 +773,14 @@ game.Players.PlayerRemoving:Connect(function(plr)
 end)
 
 ---------------------------
--- FULLBRIGHT TOGGLE
+-- FULLBRIGHT TOGGLE (Forced Brightness)
 ---------------------------
+local fullBrightEnabled = false
+local originalAmbient = Lighting.Ambient
+local originalBrightness = Lighting.Brightness
+local originalClockTime = Lighting.ClockTime
+local fullBrightConn
+
 local FullBright = Instance.new("TextButton")
 FullBright.Parent = Cheat3_Frame
 FullBright.Position = UDim2.new(0.375,0,0.74,0)
@@ -793,18 +794,30 @@ Instance.new("UICorner", FullBright)
 FullBright.ZIndex = 2
 
 FullBright.MouseButton1Click:Connect(function()
-	if FullBright.Text == "FullBright: Off" then
+	if not fullBrightEnabled then
+		originalAmbient = Lighting.Ambient
+		originalBrightness = Lighting.Brightness
+		originalClockTime = Lighting.ClockTime
+
+		fullBrightEnabled = true
 		FullBright.Text = "FullBright: On"
 		FullBright.BackgroundColor3 = Color3.new(0,1,0)
-		Lighting.Ambient = Color3.new(1,1,1)
-		Lighting.Brightness = 2
-		Lighting.ClockTime = 12
+		fullBrightConn = RunService.RenderStepped:Connect(function()
+			Lighting.Ambient = Color3.new(1,1,1)
+			Lighting.Brightness = 2
+			Lighting.ClockTime = 12
+		end)
 	else
+		fullBrightEnabled = false
 		FullBright.Text = "FullBright: Off"
 		FullBright.BackgroundColor3 = Color3.new(1,0,0)
-		Lighting.Ambient = Color3.new(0,0,0)
-		Lighting.Brightness = 1
-		Lighting.ClockTime = 14
+		if fullBrightConn then
+			fullBrightConn:Disconnect()
+			fullBrightConn = nil
+		end
+		Lighting.Ambient = originalAmbient
+		Lighting.Brightness = originalBrightness
+		Lighting.ClockTime = originalClockTime
 	end
 end)
 
@@ -857,7 +870,8 @@ local function updatePlayerList()
 				tpButton.ZIndex = 2
 				Instance.new("UICorner", tpButton)
 				tpButton.Activated:Connect(function()
-					if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+					if player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+					   and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
 					end
 				end)
@@ -918,7 +932,8 @@ PositionLabel.ZIndex = 2
 RunService.RenderStepped:Connect(function()
 	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if hrp then
-		PositionLabel.Text = string.format("X: %.2f Y: %.2f Z: %.2f", hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+		PositionLabel.Text = string.format("X: %.2f Y: %.2f Z: %.2f",
+			hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
 	end
 end)
 
@@ -1052,7 +1067,7 @@ local function startFly_HD()
 		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
 
-		-- On mobile, use horizontal component from Humanoid.MoveDirection.
+		-- On mobile, use only the horizontal component of Humanoid.MoveDirection.
 		if UIS.TouchEnabled then
 			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if h and h.MoveDirection.Magnitude > 0 then
@@ -1061,7 +1076,7 @@ local function startFly_HD()
 			end
 		end
 
-		-- Add vertical input from mobile Up/Down buttons.
+		-- Always add vertical input from mobile Up/Down buttons.
 		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
 		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
 
@@ -1188,6 +1203,942 @@ InstantRegen.MouseButton1Click:Connect(function()
 		end
 	end
 end)
+
+---------------------------
+-- SEARCH PLAYER (Auto-Updating Scrolling Frame)
+---------------------------
+local SearchPlayer = Instance.new("ScrollingFrame")
+SearchPlayer.Parent = Cheat1_Frame
+SearchPlayer.Position = UDim2.new(0.087,0,0.16,0)
+SearchPlayer.Size = UDim2.new(0,100,0,85)
+SearchPlayer.BackgroundColor3 = Color3.new(1,0,0)
+SearchPlayer.Name = "SearchPlayer"
+SearchPlayer.ZIndex = 2
+SearchPlayer.CanvasSize = UDim2.new(0,0,0,0)
+
+local listLayout = Instance.new("UIListLayout", SearchPlayer)
+listLayout.FillDirection = Enum.FillDirection.Vertical
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0,5)
+
+local searchButtons = {}
+
+local function updatePlayerList()
+	local players = game.Players:GetPlayers()
+	table.sort(players, function(a,b) return a.Name < b.Name end)
+	for userId, btn in pairs(searchButtons) do
+		local found = false
+		for _, plr in ipairs(players) do
+			if plr.UserId == userId and plr ~= player then
+				found = true
+				break
+			end
+		end
+		if not found then
+			btn:Destroy()
+			searchButtons[userId] = nil
+		end
+	end
+	local layoutOrder = 1
+	for _, plr in ipairs(players) do
+		if plr ~= player then
+			if not searchButtons[plr.UserId] then
+				local tpButton = Instance.new("TextButton")
+				tpButton.Parent = SearchPlayer
+				tpButton.Size = UDim2.new(1,0,0,15)
+				tpButton.BackgroundColor3 = Color3.fromRGB(255,155,0)
+				tpButton.TextScaled = true
+				tpButton.Font = Enum.Font.FredokaOne
+				tpButton.Text = plr.Name
+				tpButton.ZIndex = 2
+				Instance.new("UICorner", tpButton)
+				tpButton.Activated:Connect(function()
+					if player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+					   and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+					end
+				end)
+				searchButtons[plr.UserId] = tpButton
+			else
+				searchButtons[plr.UserId].Text = plr.Name
+			end
+			searchButtons[plr.UserId].LayoutOrder = layoutOrder
+			layoutOrder = layoutOrder + 1
+		end
+	end
+	SearchPlayer.CanvasSize = UDim2.new(0,0,0,listLayout.AbsoluteContentSize.Y)
+end
+
+RunService.RenderStepped:Connect(function() updatePlayerList() end)
+
+---------------------------
+-- FPS LABEL
+---------------------------
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.Parent = MainGui
+FPSLabel.Position = UDim2.new(0.103,0,0.057,0)
+FPSLabel.Size = UDim2.new(0,100,0,25)
+FPSLabel.BackgroundColor3 = Color3.new(1,0.607843,0)
+FPSLabel.TextScaled = true
+FPSLabel.Font = Enum.Font.FredokaOne
+FPSLabel.Text = "FPS: Calculating..."
+FPSLabel.Name = "FPSLabel"
+Instance.new("UICorner", FPSLabel)
+FPSLabel.ZIndex = 2
+
+local lastUpdate = tick()
+local frameCount = 0
+RunService.RenderStepped:Connect(function()
+	frameCount = frameCount + 1
+	local now = tick()
+	if now - lastUpdate >= 1 then
+		FPSLabel.Text = "FPS: " .. math.floor(frameCount / (now - lastUpdate))
+		frameCount = 0
+		lastUpdate = now
+	end
+end)
+
+---------------------------
+-- POSITION LABEL
+---------------------------
+local PositionLabel = Instance.new("TextLabel")
+PositionLabel.Parent = MainGui
+PositionLabel.Position = UDim2.new(0.214,0,0.057,0)
+PositionLabel.Size = UDim2.new(0,100,0,25)
+PositionLabel.BackgroundColor3 = Color3.new(1,0.607843,0)
+PositionLabel.TextScaled = true
+PositionLabel.Font = Enum.Font.FredokaOne
+PositionLabel.Name = "PositionLabel"
+Instance.new("UICorner", PositionLabel)
+PositionLabel.ZIndex = 2
+
+RunService.RenderStepped:Connect(function()
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		PositionLabel.Text = string.format("X: %.2f Y: %.2f Z: %.2f",
+			hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+	end
+end)
+
+---------------------------
+-- FLY SPEED TEXTBOX & MOBILE FLY BUTTONS
+---------------------------
+local FlySpeedBox = Instance.new("TextBox")
+FlySpeedBox.Name = "FlySpeedBox"
+FlySpeedBox.Parent = MainGui
+FlySpeedBox.Position = UDim2.new(0.5,-50,0,20)
+FlySpeedBox.Size = UDim2.new(0,100,0,30)
+FlySpeedBox.BackgroundColor3 = Color3.new(1,0.607843,0)
+FlySpeedBox.TextScaled = true
+FlySpeedBox.Font = Enum.Font.FredokaOne
+FlySpeedBox.PlaceholderText = "Fly Speed"
+FlySpeedBox.Text = tostring(flySpeed)
+Instance.new("UICorner", FlySpeedBox)
+FlySpeedBox.Visible = false
+
+FlySpeedBox.FocusLost:Connect(function()
+	local newSpeed = tonumber(FlySpeedBox.Text)
+	if newSpeed then
+		flySpeed = newSpeed
+	else
+		FlySpeedBox.Text = tostring(flySpeed)
+	end
+end)
+
+local UpButton = Instance.new("TextButton")
+UpButton.Name = "UpButton"
+UpButton.Parent = MainGui
+UpButton.Text = "Up"
+UpButton.Font = Enum.Font.FredokaOne
+UpButton.TextScaled = true
+UpButton.BackgroundColor3 = Color3.new(0,1,0)
+UpButton.Position = UDim2.new(0,20,1,-160)
+UpButton.Size = UDim2.new(0,60,0,30)
+Instance.new("UICorner", UpButton)
+UpButton.Visible = false
+
+local DownButton = Instance.new("TextButton")
+DownButton.Name = "DownButton"
+DownButton.Parent = MainGui
+DownButton.Text = "Down"
+DownButton.Font = Enum.Font.FredokaOne
+DownButton.TextScaled = true
+DownButton.BackgroundColor3 = Color3.new(1,0,0)
+DownButton.Position = UDim2.new(0,90,1,-160)
+DownButton.Size = UDim2.new(0,60,0,30)
+Instance.new("UICorner", DownButton)
+DownButton.Visible = false
+
+UpButton.MouseButton1Down:Connect(function() mobileUp = true end)
+UpButton.MouseButton1Up:Connect(function() mobileUp = false end)
+DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
+DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
+
+---------------------------
+-- ExecuteButton3 (Map Transparency) - Skips player models
+---------------------------
+local ExecuteButton3 = Instance.new("TextButton")
+ExecuteButton3.Parent = Cheat3_Frame
+ExecuteButton3.Position = UDim2.new(0.087,0,0.58,0)
+ExecuteButton3.Size = UDim2.new(0,100,0,25)
+ExecuteButton3.BackgroundColor3 = Color3.new(1,0.607843,0)
+ExecuteButton3.TextScaled = true
+ExecuteButton3.Font = Enum.Font.FredokaOne
+ExecuteButton3.Name = "ExecuteButton3"
+ExecuteButton3.Text = "Execute"
+Instance.new("UICorner", ExecuteButton3)
+ExecuteButton3.ZIndex = 2
+
+ExecuteButton3.MouseButton1Click:Connect(function()
+	local tVal = tonumber(MT.Text) or 0
+	for _, obj in pairs(workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local modelAncestor = obj:FindFirstAncestorOfClass("Model")
+			if not (modelAncestor and modelAncestor:FindFirstChildOfClass("Humanoid")) then
+				obj.Transparency = tVal
+			end
+		end
+	end
+end)
+
+---------------------------
+-- FLY HANDLER (HD Admin–Style) with Corrected PC & Mobile Controls
+---------------------------
+local bv, bg
+local hdFlying = false
+
+local function startFly_HD()
+	local character = player.Character
+	if not character then return end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local hum = character:FindFirstChildOfClass("Humanoid")
+	if not hrp or not hum then return end
+
+	hum.PlatformStand = true
+	FlySpeedBox.Visible = true
+	if UIS.TouchEnabled then
+		UpButton.Visible = true
+		DownButton.Visible = true
+		oldGravity = workspace.Gravity
+		workspace.Gravity = 0
+	end
+
+	bv = Instance.new("BodyVelocity", hrp)
+	bv.Velocity = Vector3.new(0,0,0)
+	bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+
+	bg = Instance.new("BodyGyro", hrp)
+	bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+	bg.P = 10000
+	bg.CFrame = workspace.CurrentCamera.CFrame
+
+	hdFlying = true
+	local flyConn
+	flyConn = RunService.RenderStepped:Connect(function()
+		if not hdFlying then
+			if flyConn then flyConn:Disconnect() end
+			return
+		end
+
+		local cam = workspace.CurrentCamera
+		local moveDir = Vector3.new(0,0,0)
+		-- PC input: W forward, S backward, A/D sideways.
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
+
+		-- On mobile, use only the horizontal component of Humanoid.MoveDirection.
+		if UIS.TouchEnabled then
+			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if h and h.MoveDirection.Magnitude > 0 then
+				local moveHoriz = Vector3.new(h.MoveDirection.X, 0, h.MoveDirection.Z)
+				moveDir = moveHoriz
+			end
+		end
+
+		-- Always add vertical input from mobile Up/Down buttons.
+		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
+		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
+
+		if moveDir.Magnitude > 0 then
+			moveDir = moveDir.Unit
+		end
+
+		bv.Velocity = moveDir * flySpeed
+		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
+	end)
+end
+
+local function stopFly_HD()
+	hdFlying = false
+	local character = player.Character
+	if character then
+		local hum = character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.PlatformStand = false
+		end
+	end
+	if bv then
+		bv:Destroy()
+		bv = nil
+	end
+	if bg then
+		bg:Destroy()
+		bg = nil
+	end
+	if UIS.TouchEnabled and oldGravity then
+		workspace.Gravity = oldGravity
+		oldGravity = nil
+	end
+	FlySpeedBox.Visible = false
+	UpButton.Visible = false
+	DownButton.Visible = false
+end
+
+Fly.MouseButton1Click:Connect(function()
+	if not flyEnabled then
+		flyEnabled = true
+		startFly_HD()
+		Fly.Text = "Fly: On"
+		Fly.BackgroundColor3 = Color3.new(0,1,0)
+	else
+		flyEnabled = false
+		stopFly_HD()
+		Fly.Text = "Fly: Off"
+		Fly.BackgroundColor3 = Color3.new(1,0,0)
+	end
+end)
+
+Noclip.MouseButton1Click:Connect(function()
+	noclipEnabled = not noclipEnabled
+	if noclipEnabled then
+		Noclip.Text = "Noclip: On"
+		Noclip.BackgroundColor3 = Color3.new(0,1,0)
+		enableNoclip()
+	else
+		Noclip.Text = "Noclip: Off"
+		Noclip.BackgroundColor3 = Color3.new(1,0,0)
+		disableNoclip()
+	end
+end)
+
+HighlightAll.MouseButton1Click:Connect(function()
+	local Players = game:GetService("Players")
+	if HighlightAll.Text == "Highlight All: Off" then
+		local function highlightCharacter(character)
+			if character and not character:FindFirstChildOfClass("Highlight") then
+				local hl = Instance.new("Highlight")
+				hl.Parent = character
+			end
+		end
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character then highlightCharacter(plr.Character) end
+			plr.CharacterAdded:Connect(highlightCharacter)
+		end
+		HighlightAll.Text = "Highlight All: On"
+		HighlightAll.BackgroundColor3 = Color3.new(0,1,0)
+	else
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character then
+				for _, child in ipairs(plr.Character:GetChildren()) do
+					if child:IsA("Highlight") then child:Destroy() end
+				end
+			end
+		end
+		HighlightAll.Text = "Highlight All: Off"
+		HighlightAll.BackgroundColor3 = Color3.new(1,0,0)
+	end
+end)
+
+InstantRegen.MouseButton1Click:Connect(function()
+	if InstantRegen.Text == "InstantRegen: Off" then
+		InstantRegen.Text = "InstantRegen: On"
+		InstantRegen.BackgroundColor3 = Color3.new(0,1,0)
+		noclipEnabled = true
+		regenConnection = RunService.Heartbeat:Connect(function()
+			local character = player.Character
+			if character then
+				local humanoid = character:FindFirstChild("Humanoid")
+				if humanoid then
+					humanoid.MaxHealth = 99999
+					humanoid.Health = 99999
+					if not character:FindFirstChild("ForceField") then
+						local ff = Instance.new("ForceField")
+						ff.Parent = character
+					end
+				end
+			end
+		end)
+	else
+		InstantRegen.Text = "InstantRegen: Off"
+		InstantRegen.BackgroundColor3 = Color3.new(1,0,0)
+		noclipEnabled = false
+		if regenConnection then
+			regenConnection:Disconnect()
+		end
+		local character = player.Character
+		if character then
+			local ff = character:FindFirstChild("ForceField")
+			if ff then ff:Destroy() end
+		end
+	end
+end)
+
+---------------------------
+-- SEARCH PLAYER (Auto-Updating Scrolling Frame)
+---------------------------
+local SearchPlayer = Instance.new("ScrollingFrame")
+SearchPlayer.Parent = Cheat1_Frame
+SearchPlayer.Position = UDim2.new(0.087,0,0.16,0)
+SearchPlayer.Size = UDim2.new(0,100,0,85)
+SearchPlayer.BackgroundColor3 = Color3.new(1,0,0)
+SearchPlayer.Name = "SearchPlayer"
+SearchPlayer.ZIndex = 2
+SearchPlayer.CanvasSize = UDim2.new(0,0,0,0)
+
+local listLayout = Instance.new("UIListLayout", SearchPlayer)
+listLayout.FillDirection = Enum.FillDirection.Vertical
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0,5)
+
+local searchButtons = {}
+
+local function updatePlayerList()
+	local players = game.Players:GetPlayers()
+	table.sort(players, function(a,b) return a.Name < b.Name end)
+	for userId, btn in pairs(searchButtons) do
+		local found = false
+		for _, plr in ipairs(players) do
+			if plr.UserId == userId and plr ~= player then
+				found = true
+				break
+			end
+		end
+		if not found then
+			btn:Destroy()
+			searchButtons[userId] = nil
+		end
+	end
+	local layoutOrder = 1
+	for _, plr in ipairs(players) do
+		if plr ~= player then
+			if not searchButtons[plr.UserId] then
+				local tpButton = Instance.new("TextButton")
+				tpButton.Parent = SearchPlayer
+				tpButton.Size = UDim2.new(1,0,0,15)
+				tpButton.BackgroundColor3 = Color3.fromRGB(255,155,0)
+				tpButton.TextScaled = true
+				tpButton.Font = Enum.Font.FredokaOne
+				tpButton.Text = plr.Name
+				tpButton.ZIndex = 2
+				Instance.new("UICorner", tpButton)
+				tpButton.Activated:Connect(function()
+					if player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+					   and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+					end
+				end)
+				searchButtons[plr.UserId] = tpButton
+			else
+				searchButtons[plr.UserId].Text = plr.Name
+			end
+			searchButtons[plr.UserId].LayoutOrder = layoutOrder
+			layoutOrder = layoutOrder + 1
+		end
+	end
+	SearchPlayer.CanvasSize = UDim2.new(0,0,0,listLayout.AbsoluteContentSize.Y)
+end
+
+RunService.RenderStepped:Connect(function() updatePlayerList() end)
+
+---------------------------
+-- FPS LABEL
+---------------------------
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.Parent = MainGui
+FPSLabel.Position = UDim2.new(0.103,0,0.057,0)
+FPSLabel.Size = UDim2.new(0,100,0,25)
+FPSLabel.BackgroundColor3 = Color3.new(1,0.607843,0)
+FPSLabel.TextScaled = true
+FPSLabel.Font = Enum.Font.FredokaOne
+FPSLabel.Text = "FPS: Calculating..."
+FPSLabel.Name = "FPSLabel"
+Instance.new("UICorner", FPSLabel)
+FPSLabel.ZIndex = 2
+
+local lastUpdate = tick()
+local frameCount = 0
+RunService.RenderStepped:Connect(function()
+	frameCount = frameCount + 1
+	local now = tick()
+	if now - lastUpdate >= 1 then
+		FPSLabel.Text = "FPS: " .. math.floor(frameCount / (now - lastUpdate))
+		frameCount = 0
+		lastUpdate = now
+	end
+end)
+
+---------------------------
+-- POSITION LABEL
+---------------------------
+local PositionLabel = Instance.new("TextLabel")
+PositionLabel.Parent = MainGui
+PositionLabel.Position = UDim2.new(0.214,0,0.057,0)
+PositionLabel.Size = UDim2.new(0,100,0,25)
+PositionLabel.BackgroundColor3 = Color3.new(1,0.607843,0)
+PositionLabel.TextScaled = true
+PositionLabel.Font = Enum.Font.FredokaOne
+PositionLabel.Name = "PositionLabel"
+Instance.new("UICorner", PositionLabel)
+PositionLabel.ZIndex = 2
+
+RunService.RenderStepped:Connect(function()
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		PositionLabel.Text = string.format("X: %.2f Y: %.2f Z: %.2f",
+			hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+	end
+end)
+
+---------------------------
+-- FLY SPEED TEXTBOX & MOBILE FLY BUTTONS
+---------------------------
+local FlySpeedBox = Instance.new("TextBox")
+FlySpeedBox.Name = "FlySpeedBox"
+FlySpeedBox.Parent = MainGui
+FlySpeedBox.Position = UDim2.new(0.5,-50,0,20)
+FlySpeedBox.Size = UDim2.new(0,100,0,30)
+FlySpeedBox.BackgroundColor3 = Color3.new(1,0.607843,0)
+FlySpeedBox.TextScaled = true
+FlySpeedBox.Font = Enum.Font.FredokaOne
+FlySpeedBox.PlaceholderText = "Fly Speed"
+FlySpeedBox.Text = tostring(flySpeed)
+Instance.new("UICorner", FlySpeedBox)
+FlySpeedBox.Visible = false
+
+FlySpeedBox.FocusLost:Connect(function()
+	local newSpeed = tonumber(FlySpeedBox.Text)
+	if newSpeed then
+		flySpeed = newSpeed
+	else
+		FlySpeedBox.Text = tostring(flySpeed)
+	end
+end)
+
+local UpButton = Instance.new("TextButton")
+UpButton.Name = "UpButton"
+UpButton.Parent = MainGui
+UpButton.Text = "Up"
+UpButton.Font = Enum.Font.FredokaOne
+UpButton.TextScaled = true
+UpButton.BackgroundColor3 = Color3.new(0,1,0)
+UpButton.Position = UDim2.new(0,20,1,-160)
+UpButton.Size = UDim2.new(0,60,0,30)
+Instance.new("UICorner", UpButton)
+UpButton.Visible = false
+
+local DownButton = Instance.new("TextButton")
+DownButton.Name = "DownButton"
+DownButton.Parent = MainGui
+DownButton.Text = "Down"
+DownButton.Font = Enum.Font.FredokaOne
+DownButton.TextScaled = true
+DownButton.BackgroundColor3 = Color3.new(1,0,0)
+DownButton.Position = UDim2.new(0,90,1,-160)
+DownButton.Size = UDim2.new(0,60,0,30)
+Instance.new("UICorner", DownButton)
+DownButton.Visible = false
+
+UpButton.MouseButton1Down:Connect(function() mobileUp = true end)
+UpButton.MouseButton1Up:Connect(function() mobileUp = false end)
+DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
+DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
+
+---------------------------
+-- ExecuteButton3 (Map Transparency) - Skips player models
+---------------------------
+local ExecuteButton3 = Instance.new("TextButton")
+ExecuteButton3.Parent = Cheat3_Frame
+ExecuteButton3.Position = UDim2.new(0.087,0,0.58,0)
+ExecuteButton3.Size = UDim2.new(0,100,0,25)
+ExecuteButton3.BackgroundColor3 = Color3.new(1,0.607843,0)
+ExecuteButton3.TextScaled = true
+ExecuteButton3.Font = Enum.Font.FredokaOne
+ExecuteButton3.Name = "ExecuteButton3"
+ExecuteButton3.Text = "Execute"
+Instance.new("UICorner", ExecuteButton3)
+ExecuteButton3.ZIndex = 2
+
+ExecuteButton3.MouseButton1Click:Connect(function()
+	local tVal = tonumber(MT.Text) or 0
+	for _, obj in pairs(workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local modelAncestor = obj:FindFirstAncestorOfClass("Model")
+			if not (modelAncestor and modelAncestor:FindFirstChildOfClass("Humanoid")) then
+				obj.Transparency = tVal
+			end
+		end
+	end
+end)
+
+---------------------------
+-- FLY HANDLER (HD Admin–Style) with Corrected PC & Mobile Controls
+---------------------------
+local bv, bg
+local hdFlying = false
+
+local function startFly_HD()
+	local character = player.Character
+	if not character then return end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local hum = character:FindFirstChildOfClass("Humanoid")
+	if not hrp or not hum then return end
+
+	hum.PlatformStand = true
+	FlySpeedBox.Visible = true
+	if UIS.TouchEnabled then
+		UpButton.Visible = true
+		DownButton.Visible = true
+		oldGravity = workspace.Gravity
+		workspace.Gravity = 0
+	end
+
+	bv = Instance.new("BodyVelocity", hrp)
+	bv.Velocity = Vector3.new(0,0,0)
+	bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+
+	bg = Instance.new("BodyGyro", hrp)
+	bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+	bg.P = 10000
+	bg.CFrame = workspace.CurrentCamera.CFrame
+
+	hdFlying = true
+	local flyConn
+	flyConn = RunService.RenderStepped:Connect(function()
+		if not hdFlying then
+			if flyConn then flyConn:Disconnect() end
+			return
+		end
+
+		local cam = workspace.CurrentCamera
+		local moveDir = Vector3.new(0,0,0)
+		-- PC input: W forward, S backward, A/D sideways.
+		if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
+
+		-- On mobile, use only the horizontal component of Humanoid.MoveDirection.
+		if UIS.TouchEnabled then
+			local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if h and h.MoveDirection.Magnitude > 0 then
+				local moveHoriz = Vector3.new(h.MoveDirection.X, 0, h.MoveDirection.Z)
+				moveDir = moveHoriz
+			end
+		end
+
+		-- Always add vertical input from mobile Up/Down buttons.
+		if mobileUp then moveDir = moveDir + Vector3.new(0,1,0) end
+		if mobileDown then moveDir = moveDir + Vector3.new(0,-1,0) end
+
+		if moveDir.Magnitude > 0 then
+			moveDir = moveDir.Unit
+		end
+
+		bv.Velocity = moveDir * flySpeed
+		bg.CFrame = bg.CFrame:Lerp(cam.CFrame, 0.2)
+	end)
+end
+
+local function stopFly_HD()
+	hdFlying = false
+	local character = player.Character
+	if character then
+		local hum = character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.PlatformStand = false
+		end
+	end
+	if bv then
+		bv:Destroy()
+		bv = nil
+	end
+	if bg then
+		bg:Destroy()
+		bg = nil
+	end
+	if UIS.TouchEnabled and oldGravity then
+		workspace.Gravity = oldGravity
+		oldGravity = nil
+	end
+	FlySpeedBox.Visible = false
+	UpButton.Visible = false
+	DownButton.Visible = false
+end
+
+Fly.MouseButton1Click:Connect(function()
+	if not flyEnabled then
+		flyEnabled = true
+		startFly_HD()
+		Fly.Text = "Fly: On"
+		Fly.BackgroundColor3 = Color3.new(0,1,0)
+	else
+		flyEnabled = false
+		stopFly_HD()
+		Fly.Text = "Fly: Off"
+		Fly.BackgroundColor3 = Color3.new(1,0,0)
+	end
+end)
+
+Noclip.MouseButton1Click:Connect(function()
+	noclipEnabled = not noclipEnabled
+	if noclipEnabled then
+		Noclip.Text = "Noclip: On"
+		Noclip.BackgroundColor3 = Color3.new(0,1,0)
+		enableNoclip()
+	else
+		Noclip.Text = "Noclip: Off"
+		Noclip.BackgroundColor3 = Color3.new(1,0,0)
+		disableNoclip()
+	end
+end)
+
+HighlightAll.MouseButton1Click:Connect(function()
+	local Players = game:GetService("Players")
+	if HighlightAll.Text == "Highlight All: Off" then
+		local function highlightCharacter(character)
+			if character and not character:FindFirstChildOfClass("Highlight") then
+				local hl = Instance.new("Highlight")
+				hl.Parent = character
+			end
+		end
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character then highlightCharacter(plr.Character) end
+			plr.CharacterAdded:Connect(highlightCharacter)
+		end
+		HighlightAll.Text = "Highlight All: On"
+		HighlightAll.BackgroundColor3 = Color3.new(0,1,0)
+	else
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character then
+				for _, child in ipairs(plr.Character:GetChildren()) do
+					if child:IsA("Highlight") then child:Destroy() end
+				end
+			end
+		end
+		HighlightAll.Text = "Highlight All: Off"
+		HighlightAll.BackgroundColor3 = Color3.new(1,0,0)
+	end
+end)
+
+InstantRegen.MouseButton1Click:Connect(function()
+	if InstantRegen.Text == "InstantRegen: Off" then
+		InstantRegen.Text = "InstantRegen: On"
+		InstantRegen.BackgroundColor3 = Color3.new(0,1,0)
+		noclipEnabled = true
+		regenConnection = RunService.Heartbeat:Connect(function()
+			local character = player.Character
+			if character then
+				local humanoid = character:FindFirstChild("Humanoid")
+				if humanoid then
+					humanoid.MaxHealth = 99999
+					humanoid.Health = 99999
+					if not character:FindFirstChild("ForceField") then
+						local ff = Instance.new("ForceField")
+						ff.Parent = character
+					end
+				end
+			end
+		end)
+	else
+		InstantRegen.Text = "InstantRegen: Off"
+		InstantRegen.BackgroundColor3 = Color3.new(1,0,0)
+		noclipEnabled = false
+		if regenConnection then
+			regenConnection:Disconnect()
+		end
+		local character = player.Character
+		if character then
+			local ff = character:FindFirstChild("ForceField")
+			if ff then ff:Destroy() end
+		end
+	end
+end)
+
+---------------------------
+-- SEARCH PLAYER (Auto-Updating Scrolling Frame)
+---------------------------
+local SearchPlayer = Instance.new("ScrollingFrame")
+SearchPlayer.Parent = Cheat1_Frame
+SearchPlayer.Position = UDim2.new(0.087,0,0.16,0)
+SearchPlayer.Size = UDim2.new(0,100,0,85)
+SearchPlayer.BackgroundColor3 = Color3.new(1,0,0)
+SearchPlayer.Name = "SearchPlayer"
+SearchPlayer.ZIndex = 2
+SearchPlayer.CanvasSize = UDim2.new(0,0,0,0)
+
+local listLayout = Instance.new("UIListLayout", SearchPlayer)
+listLayout.FillDirection = Enum.FillDirection.Vertical
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0,5)
+
+local searchButtons = {}
+
+local function updatePlayerList()
+	local players = game.Players:GetPlayers()
+	table.sort(players, function(a,b) return a.Name < b.Name end)
+	for userId, btn in pairs(searchButtons) do
+		local found = false
+		for _, plr in ipairs(players) do
+			if plr.UserId == userId and plr ~= player then
+				found = true
+				break
+			end
+		end
+		if not found then
+			btn:Destroy()
+			searchButtons[userId] = nil
+		end
+	end
+	local layoutOrder = 1
+	for _, plr in ipairs(players) do
+		if plr ~= player then
+			if not searchButtons[plr.UserId] then
+				local tpButton = Instance.new("TextButton")
+				tpButton.Parent = SearchPlayer
+				tpButton.Size = UDim2.new(1,0,0,15)
+				tpButton.BackgroundColor3 = Color3.fromRGB(255,155,0)
+				tpButton.TextScaled = true
+				tpButton.Font = Enum.Font.FredokaOne
+				tpButton.Text = plr.Name
+				tpButton.ZIndex = 2
+				Instance.new("UICorner", tpButton)
+				tpButton.Activated:Connect(function()
+					if player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+					   and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+					end
+				end)
+				searchButtons[plr.UserId] = tpButton
+			else
+				searchButtons[plr.UserId].Text = plr.Name
+			end
+			searchButtons[plr.UserId].LayoutOrder = layoutOrder
+			layoutOrder = layoutOrder + 1
+		end
+	end
+	SearchPlayer.CanvasSize = UDim2.new(0,0,0,listLayout.AbsoluteContentSize.Y)
+end
+
+RunService.RenderStepped:Connect(function() updatePlayerList() end)
+
+---------------------------
+-- FPS LABEL
+---------------------------
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.Parent = MainGui
+FPSLabel.Position = UDim2.new(0.103,0,0.057,0)
+FPSLabel.Size = UDim2.new(0,100,0,25)
+FPSLabel.BackgroundColor3 = Color3.new(1,0.607843,0)
+FPSLabel.TextScaled = true
+FPSLabel.Font = Enum.Font.FredokaOne
+FPSLabel.Text = "FPS: Calculating..."
+FPSLabel.Name = "FPSLabel"
+Instance.new("UICorner", FPSLabel)
+FPSLabel.ZIndex = 2
+
+local lastUpdate = tick()
+local frameCount = 0
+RunService.RenderStepped:Connect(function()
+	frameCount = frameCount + 1
+	local now = tick()
+	if now - lastUpdate >= 1 then
+		FPSLabel.Text = "FPS: " .. math.floor(frameCount / (now - lastUpdate))
+		frameCount = 0
+		lastUpdate = now
+	end
+end)
+
+---------------------------
+-- POSITION LABEL
+---------------------------
+local PositionLabel = Instance.new("TextLabel")
+PositionLabel.Parent = MainGui
+PositionLabel.Position = UDim2.new(0.214,0,0.057,0)
+PositionLabel.Size = UDim2.new(0,100,0,25)
+PositionLabel.BackgroundColor3 = Color3.new(1,0.607843,0)
+PositionLabel.TextScaled = true
+PositionLabel.Font = Enum.Font.FredokaOne
+PositionLabel.Name = "PositionLabel"
+Instance.new("UICorner", PositionLabel)
+PositionLabel.ZIndex = 2
+
+RunService.RenderStepped:Connect(function()
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		PositionLabel.Text = string.format("X: %.2f Y: %.2f Z: %.2f",
+			hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+	end
+end)
+
+---------------------------
+-- FLY SPEED TEXTBOX & MOBILE FLY BUTTONS
+---------------------------
+local FlySpeedBox = Instance.new("TextBox")
+FlySpeedBox.Name = "FlySpeedBox"
+FlySpeedBox.Parent = MainGui
+FlySpeedBox.Position = UDim2.new(0.5,-50,0,20)
+FlySpeedBox.Size = UDim2.new(0,100,0,30)
+FlySpeedBox.BackgroundColor3 = Color3.new(1,0.607843,0)
+FlySpeedBox.TextScaled = true
+FlySpeedBox.Font = Enum.Font.FredokaOne
+FlySpeedBox.PlaceholderText = "Fly Speed"
+FlySpeedBox.Text = tostring(flySpeed)
+Instance.new("UICorner", FlySpeedBox)
+FlySpeedBox.Visible = false
+
+FlySpeedBox.FocusLost:Connect(function()
+	local newSpeed = tonumber(FlySpeedBox.Text)
+	if newSpeed then
+		flySpeed = newSpeed
+	else
+		FlySpeedBox.Text = tostring(flySpeed)
+	end
+end)
+
+local UpButton = Instance.new("TextButton")
+UpButton.Name = "UpButton"
+UpButton.Parent = MainGui
+UpButton.Text = "Up"
+UpButton.Font = Enum.Font.FredokaOne
+UpButton.TextScaled = true
+UpButton.BackgroundColor3 = Color3.new(0,1,0)
+UpButton.Position = UDim2.new(0,20,1,-160)
+UpButton.Size = UDim2.new(0,60,0,30)
+Instance.new("UICorner", UpButton)
+UpButton.Visible = false
+
+local DownButton = Instance.new("TextButton")
+DownButton.Name = "DownButton"
+DownButton.Parent = MainGui
+DownButton.Text = "Down"
+DownButton.Font = Enum.Font.FredokaOne
+DownButton.TextScaled = true
+DownButton.BackgroundColor3 = Color3.new(1,0,0)
+DownButton.Position = UDim2.new(0,90,1,-160)
+DownButton.Size = UDim2.new(0,60,0,30)
+Instance.new("UICorner", DownButton)
+DownButton.Visible = false
+
+UpButton.MouseButton1Down:Connect(function() mobileUp = true end)
+UpButton.MouseButton1Up:Connect(function() mobileUp = false end)
+DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
+DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
 
 ---------------------------
 -- INITIALIZE
