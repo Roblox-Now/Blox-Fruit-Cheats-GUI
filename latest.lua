@@ -111,6 +111,12 @@ end
 -- MAIN GUI SETUP
 ---------------------------
 local MainGui = Instance.new("ScreenGui")
+
+local ExistingGui = player.PlayerGui:FindFirstChild(Menu_Name)
+if ExistingGui then
+	ExistingGui:Destroy()
+end
+
 MainGui.Name = Menu_Name
 MainGui.Parent = player:FindFirstChildOfClass("PlayerGui")
 
@@ -871,7 +877,7 @@ local function updatePlayerList()
 				Instance.new("UICorner", tpButton)
 				tpButton.Activated:Connect(function()
 					if player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-					   and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
 					end
 				end)
@@ -1254,7 +1260,7 @@ local function updatePlayerList()
 				Instance.new("UICorner", tpButton)
 				tpButton.Activated:Connect(function()
 					if player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-					   and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
 					end
 				end)
@@ -1637,7 +1643,7 @@ local function updatePlayerList()
 				Instance.new("UICorner", tpButton)
 				tpButton.Activated:Connect(function()
 					if player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-					   and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
 					end
 				end)
@@ -2020,7 +2026,7 @@ local function updatePlayerList()
 				Instance.new("UICorner", tpButton)
 				tpButton.Activated:Connect(function()
 					if player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-					   and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 						player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
 					end
 				end)
