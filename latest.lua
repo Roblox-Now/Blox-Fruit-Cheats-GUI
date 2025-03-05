@@ -617,7 +617,7 @@ local RefreshCharacter = Instance.new("TextButton")
 RefreshCharacter.Parent = MainFrame
 RefreshCharacter.Position = UDim2.new(0.25,0,-0.094,0)
 RefreshCharacter.Size = UDim2.new(0,100,0,15)
-RefreshCharacter.BackgroundColor3 = Color3.new(1,0,0)
+RefreshCharacter.BackgroundColor3 = Color3.new(1, 0.607843, 0)
 RefreshCharacter.TextScaled = true
 RefreshCharacter.Font = Enum.Font.FredokaOne
 RefreshCharacter.Text = "RefreshCharacter"
@@ -2145,6 +2145,138 @@ UpButton.MouseButton1Down:Connect(function() mobileUp = true end)
 UpButton.MouseButton1Up:Connect(function() mobileUp = false end)
 DownButton.MouseButton1Down:Connect(function() mobileDown = true end)
 DownButton.MouseButton1Up:Connect(function() mobileDown = false end)
+
+---------------------------
+-- UI-GRADIENTS
+---------------------------
+
+local UIGradient1 = Instance.new("UIGradient", OpenButton)
+UIGradient1.Rotation = 45
+
+UIGradient1.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 153, 255))
+}
+
+local UIGradient2 = Instance.new("UIGradient", FPSLabel)
+UIGradient2.Rotation = 90
+
+UIGradient2.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient3 = Instance.new("UIGradient", PositionLabel)
+UIGradient3.Rotation = 90
+
+UIGradient3.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient4 = Instance.new("UIGradient", DisconnectButton)
+UIGradient4.Rotation = 90
+
+UIGradient4.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient5 = Instance.new("UIGradient", RefreshCharacter)
+UIGradient5.Rotation = 90
+
+UIGradient5.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient6 = Instance.new("UIGradient", RejoinButton)
+UIGradient6.Rotation = 90
+
+UIGradient6.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient7 = Instance.new("UIGradient", Credits)
+UIGradient7.Rotation = 90
+
+UIGradient7.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 153, 255))
+}
+
+local UIGradient8 = Instance.new("UIGradient", TitleLabel)
+UIGradient8.Rotation = 90
+
+UIGradient8.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 0, 255))
+}
+
+local UIGradient9 = Instance.new("UIGradient", Version_Text)
+UIGradient9.Rotation = 90
+
+UIGradient9.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 153, 255))
+}
+
+local UIGradient10 = Instance.new("UIGradient", Cheat2_Button)
+UIGradient10.Rotation = 90
+
+UIGradient10.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient11 = Instance.new("UIGradient", Cheat3_Button)
+UIGradient11.Rotation = 90
+
+UIGradient11.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient12 = Instance.new("UIGradient", Cheat1_Button)
+UIGradient12.Rotation = 90
+
+UIGradient12.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient13 = Instance.new("UIGradient", ExecuteTPButton)
+UIGradient13.Rotation = 90
+
+UIGradient13.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient14 = Instance.new("UIGradient", ExecuteWSButton)
+UIGradient14.Rotation = 90
+
+UIGradient14.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient15 = Instance.new("UIGradient", ExecuteJPButton)
+UIGradient15.Rotation = 90
+
+UIGradient15.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
+
+local UIGradient16 = Instance.new("UIGradient", ExecuteButton3)
+UIGradient16.Rotation = 90
+
+UIGradient16.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 155, 0))
+}
 
 ---------------------------
 -- INITIALIZE
