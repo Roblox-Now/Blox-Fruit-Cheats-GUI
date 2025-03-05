@@ -125,7 +125,7 @@ local OpenButton = Instance.new("ImageButton")
 OpenButton.Name = "OpenButton"
 OpenButton.Parent = MainGui
 OpenButton.Size = UDim2.new(0,50,0,50)
-OpenButton.Position = UDim2.new(0.032,0,0.386,0)
+OpenButton.Position = UDim2.new(0.489, 0, 0.036, 0)
 OpenButton.AnchorPoint = Vector2.new(0.5,0.5)
 Instance.new("UICorner", OpenButton)
 OpenButton.Image = "http://www.roblox.com/asset/?id=104276980467632"
